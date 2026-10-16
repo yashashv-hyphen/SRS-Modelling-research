@@ -1,0 +1,48 @@
+# Theme matching the hand-rolled chart palette in srs_dashboard.py (BLUE/GRAY/GREEN/RED/INK).
+# Keeping both [theme.light] and [theme.dark] lets users still toggle themes in the app menu,
+# and srs_dashboard.py's own _is_dark_theme() detection keeps the Altair charts in sync.
+
+[theme]
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+headingFont = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@600;700&display=swap"
+baseFontSize = 15
+baseRadius = "8px"
+buttonRadius = "8px"
+showWidgetBorder = true
+showSidebarBorder = true
+linkUnderline = false
+chartCategoricalColors = ["#2a78d6", "#c9791a", "#7a54b8", "#128a76", "#0ca30c", "#d03b3b"]
+
+[theme.light]
+primaryColor = "#2a78d6"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f6f5f1"
+textColor = "#33322f"
+linkColor = "#2a78d6"
+borderColor = "#e1e0d9"
+greenColor = "#0ca30c"
+redColor = "#d03b3b"
+grayColor = "#8c8b86"
+
+[theme.dark]
+primaryColor = "#4c9be8"
+backgroundColor = "#14161a"
+secondaryBackgroundColor = "#1c1e24"
+textColor = "#e8e7e2"
+linkColor = "#4c9be8"
+borderColor = "#3a3a37"
+greenColor = "#3ecf4a"
+redColor = "#e8635f"
+grayColor = "#8d8c87"
+
+[theme.light.sidebar]
+backgroundColor = "#f6f5f1"
+secondaryBackgroundColor = "#eceae3"
+borderColor = "#e1e0d9"
+primaryColor = "#2a78d6"
+
+[theme.dark.sidebar]
+backgroundColor = "#1a1c22"
+secondaryBackgroundColor = "#21242b"
+borderColor = "#3a3a37"
+primaryColor = "#4c9be8"

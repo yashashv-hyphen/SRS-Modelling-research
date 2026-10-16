@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*Zone.Identifier
+.playwright-mcp/
+results.json
+results_simulation.json
+.streamlit/secrets.toml
+graphify-out/

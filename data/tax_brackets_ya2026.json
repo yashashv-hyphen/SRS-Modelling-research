@@ -1,0 +1,21 @@
+{
+  "source": "IRAS resident individual income tax rates, YA2024 onwards (unchanged for YA2026)",
+  "source_url": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-residency-and-tax-rates/individual-income-tax-rates",
+  "units": "SGD chargeable income; rate as a fraction",
+  "note": "Each entry is [upper bound of band, rate on income within that band]. null upper bound = no limit.",
+  "brackets": [
+    [20000, 0.0],
+    [30000, 0.02],
+    [40000, 0.035],
+    [80000, 0.07],
+    [120000, 0.115],
+    [160000, 0.15],
+    [200000, 0.18],
+    [240000, 0.19],
+    [280000, 0.195],
+    [320000, 0.20],
+    [500000, 0.22],
+    [1000000, 0.23],
+    [null, 0.24]
+  ]
+}
