@@ -1,0 +1,38 @@
+{
+  "source": "Data.gov.sg / IRAS, \"Tax Rates for Individual Income Tax\" (open dataset, resource_id d_f73055c69144d2e7734c28811d3982aa). Government open-data record of every Singapore resident individual income tax rate schedule and the Year of Assessment each took effect, YA2003-2024.",
+  "source_url": "https://data.gov.sg/dataset/tax-rates-for-individual-income-tax",
+  "units": "SGD chargeable income; rate as a fraction",
+  "note": "Each entry's 'brackets' has the same shape as data/tax_brackets_ya2026.json: [upper bound of band, rate on income within that band], null upper bound = no limit. 'year_of_assessment' is the first YA the schedule applied; 'effective_through' is the last YA before the next schedule in this list took over (null = still current, matches tax_brackets_ya2026.json). Confidence: primary/official (government open-data portal attributing IRAS as the source agency), not a secondary/forum source, so no [VERIFY] tag. The 2003 and 2006 entries are the tail of a multi-year phased rate cut that settled at the 2007 schedule (every band fell a little each year); 2007, 2012, 2017 and 2024 are the genuine structural revisions used for calibration in srs_tax_regime.py — see that file's docstring.",
+  "history": [
+    {
+      "year_of_assessment": 2003,
+      "effective_through": 2005,
+      "brackets": [[20000, 0.00], [30000, 0.04], [40000, 0.06], [80000, 0.09], [160000, 0.15], [320000, 0.19], [null, 0.22]]
+    },
+    {
+      "year_of_assessment": 2006,
+      "effective_through": 2006,
+      "brackets": [[20000, 0.00], [30000, 0.0375], [40000, 0.0575], [80000, 0.0875], [160000, 0.145], [320000, 0.18], [null, 0.21]]
+    },
+    {
+      "year_of_assessment": 2007,
+      "effective_through": 2011,
+      "brackets": [[20000, 0.00], [30000, 0.035], [40000, 0.055], [80000, 0.085], [160000, 0.14], [320000, 0.17], [null, 0.20]]
+    },
+    {
+      "year_of_assessment": 2012,
+      "effective_through": 2016,
+      "brackets": [[20000, 0.00], [30000, 0.02], [40000, 0.035], [80000, 0.07], [120000, 0.115], [160000, 0.15], [200000, 0.17], [320000, 0.18], [null, 0.20]]
+    },
+    {
+      "year_of_assessment": 2017,
+      "effective_through": 2023,
+      "brackets": [[20000, 0.00], [30000, 0.02], [40000, 0.035], [80000, 0.07], [120000, 0.115], [160000, 0.15], [200000, 0.18], [240000, 0.19], [280000, 0.195], [320000, 0.20], [null, 0.22]]
+    },
+    {
+      "year_of_assessment": 2024,
+      "effective_through": null,
+      "brackets": [[20000, 0.00], [30000, 0.02], [40000, 0.035], [80000, 0.07], [120000, 0.115], [160000, 0.15], [200000, 0.18], [240000, 0.19], [280000, 0.195], [320000, 0.20], [500000, 0.22], [1000000, 0.23], [null, 0.24]]
+    }
+  ]
+}
