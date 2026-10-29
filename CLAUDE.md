@@ -15,10 +15,16 @@ srs_simulation.py             Monte Carlo engine: random returns/tax-creep, MPC 
                                after-window and early-exit comparisons (extends srs_model.py)
 srs_walkthrough.py            renders srs_simulation.py's output as plain-language Markdown
 srs_dashboard.py              interactive Streamlit UI over srs_simulation.py
-data/tax_brackets_ya2026.json IRAS resident rates — the only place brackets live
-tests/test_srs_model.py       19 regression tests pinning every verified number
-tests/test_srs_simulation.py  17 tests for the simulation engine (zero-noise mode must
-                               reproduce the exact base case in test_srs_model.py)
+srs_tax_regime.py             Model 3: real historical IRAS brackets (YA2003-2024) + calibrated
+                               50-year discrete/smooth projections (extends srs_model.py)
+data/tax_brackets_ya2026.json IRAS resident rates — the only place *current* brackets live
+data/tax_brackets_historical.json six real historical schedules, Data.gov.sg/IRAS, with source
+tests/test_srs_model.py       21 regression tests pinning every verified number
+tests/test_srs_simulation.py  47 tests for the simulation engine (zero-noise mode must
+                               reproduce the exact base case in test_srs_model.py; 8 cover
+                               the T5 early-exit-as-a-real-option Poisson model)
+tests/test_srs_tax_regime.py  11 tests for the tax-regime model, cross-checked against the
+                               closed-form crossover in docs/findings.md #7
 docs/srs-rules.md             scheme rules incl. the annuity clause, with sources
 docs/findings.md              verified results and where each number comes from
 docs/open-tasks.md            what to build next, in priority order
@@ -31,9 +37,12 @@ docs/simulation-walkthrough.md generated report from srs_simulation.py — regen
 ```
 python tests/test_srs_model.py       # no pytest needed; or: python -m pytest tests/
 python tests/test_srs_simulation.py  # simulation engine tests
+python tests/test_srs_tax_regime.py  # tax-regime model tests
 python srs_model.py                  # base case, writes results.json to the current dir
 python srs_simulation.py             # Monte Carlo grid, writes results_simulation.json
                                       # and docs/simulation-walkthrough.md
+python srs_tax_regime.py             # historical + 50-year projections, writes
+                                      # results_tax_regime.json
 streamlit run srs_dashboard.py       # interactive dashboard, opens in a browser
 ```
 

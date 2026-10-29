@@ -390,6 +390,75 @@ def test_bracket_creep_raises_advantage_over_frozen():
     assert all(v > 0 for v in by_name.values())
 
 
+# --------------------------------------------- early exit as a real option (open task T5)
+def test_poisson_counts_average_to_lambda():
+    rng = np.random.default_rng(0)
+    counts = sim.poisson_opportunity_counts(20_000, lam=0.3, rng=rng)
+    assert close(np.mean(counts), 0.3, 0.02)
+
+
+def test_poisson_zero_lambda_never_arrives():
+    rng = np.random.default_rng(0)
+    counts = sim.poisson_opportunity_counts(500, lam=0.0, rng=rng)
+    assert all(c == 0 for c in counts)
+
+
+def test_excess_returns_are_positive_and_average_to_mean():
+    rng = np.random.default_rng(0)
+    draws = sim.draw_excess_returns(20_000, mean_excess=0.05, rng=rng)
+    assert all(d > 0 for d in draws)
+    assert close(np.mean(draws), 0.05, 0.003)
+
+
+def test_breakeven_excess_matches_absolute_minus_forecast():
+    # early_exit_breakeven_excess is defined as the absolute breakeven return minus r_forecast.
+    abs_thr = sim.early_exit_breakeven_return(500_000, 5, 0.05, other_income=0.0)
+    excess_thr = sim.early_exit_breakeven_excess(500_000, 5, 0.05, other_income=0.0)
+    assert close(abs_thr - 0.05, excess_thr, 1e-9)
+
+
+def test_early_exit_path_only_exits_when_offer_clears_the_bar():
+    # A single scripted year: force one opportunity whose offer we know, and check the
+    # exit/no-exit decision matches a manual comparison against the threshold.
+    balance_path = [500_000.0, 480_000.0]
+    rows = sim.simulate_early_exit_path(balance_path, r_forecast=0.05, lam=5.0,
+                                         mean_excess=0.20, rng=np.random.default_rng(3))
+    row = rows[0]
+    if row["best_excess_offer"] is None:
+        assert not row["exited"]
+    else:
+        assert row["exited"] == (row["best_excess_offer"] >= row["breakeven_excess_return"])
+
+
+def test_more_frequent_opportunities_raise_exit_probability():
+    balance_path = [500_000.0 * (1 - i / 10) for i in range(11)]
+    low = sim.simulate_early_exit_portfolio(balance_path, 0.05, lam=0.05, mean_excess=0.05,
+                                            n_paths=800, seed=1)
+    high = sim.simulate_early_exit_portfolio(balance_path, 0.05, lam=1.0, mean_excess=0.05,
+                                             n_paths=800, seed=1)
+    assert high["fraction_that_ever_exit_early"] > low["fraction_that_ever_exit_early"]
+
+
+def test_early_exit_threshold_rises_with_other_income():
+    # The T5 practitioner-dispute question: the breakeven bar is NOT a single number, it
+    # depends on income in the withdrawal year (higher income => higher marginal rate on the
+    # 100%-taxable early withdrawal => a bigger excess return is needed to justify it).
+    rows = sim.early_exit_threshold_by_bracket(1_000_000, years_to_lock_grid=(5,),
+                                               incomes=(0, 100_000, 300_000), r_forecast=0.05)
+    thresholds = [r["breakeven_excess_return"] for r in rows]
+    assert thresholds == sorted(thresholds)
+    assert thresholds[0] < thresholds[-1]
+
+
+def test_early_exit_threshold_falls_with_more_years_to_lock():
+    # More years left to lock up means the "stay" side compounds longer, so a smaller excess
+    # return from breaking out now is enough to catch up by the natural unlock date.
+    rows = sim.early_exit_threshold_by_bracket(1_000_000, years_to_lock_grid=(1, 5, 9),
+                                               incomes=(100_000,), r_forecast=0.05)
+    thresholds = [r["breakeven_excess_return"] for r in rows]
+    assert thresholds == sorted(thresholds, reverse=True)
+
+
 if __name__ == "__main__":
     tests = [(n, f) for n, f in sorted(globals().items()) if n.startswith("test_")]
     failed = 0

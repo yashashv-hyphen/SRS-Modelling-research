@@ -40,13 +40,13 @@ b. **Stochastic returns.** Monte Carlo (start lognormal). Compare level, $40k/yr
 c. **Historical simulation.** Block-bootstrap a long return series to capture sequence risk.
    Preferred source: Dimson–Marsh–Staunton via NTU library (confirm access); fallback is a public
    US series, stated as a limitation.
-   **Done (fallback path):** `sim.historical_block_bootstrap_path()` splices real consecutive-year
-   blocks from `data/sp500_annual_returns.json` (S&P 500 total returns, 1928-2025, Damodaran/NYU
-   Stern — see the file for the full citation). Selectable in the dashboard via "Model the market
-   using" → "Real market history", alongside (not replacing) the original parametric mode. Still
-   open: swap in Dimson–Marsh–Staunton if NTU library access is confirmed, and decide whether a
-   single-country US series is defensible as more than an illustration for a Singapore-domiciled
-   SRS portfolio.
+   **Done (fallback path, supervisor-approved):** `sim.historical_block_bootstrap_path()` splices
+   real consecutive-year blocks from `data/sp500_annual_returns.json` (S&P 500 total returns,
+   1928-2025, Damodaran/NYU Stern — see the file for the full citation). Selectable in the
+   dashboard via "Model the market using" → "Real market history", alongside (not replacing) the
+   original parametric mode. Raised with the supervisor whether a single-country US series is
+   defensible for a Singapore-domiciled SRS portfolio — confirmed acceptable; no need to pursue
+   Dimson–Marsh–Staunton/NTU library access further for this project.
 d. **Dynamic programming.** State = (balance, years left in window, other income); control = this
    year's withdrawal; terminal condition = deemed withdrawal of the residual in one year (a kink).
    Discretise the balance grid, solve backwards, compare the optimal policy to level drawdown and
@@ -89,6 +89,25 @@ Every function takes `brackets`, so schedules are swappable.
   close to tax-free — note that asymmetry.
 - Output: how the T1 frontier moves under each scenario.
 
+**Done (historical foundation, Model 3):** `srs_tax_regime.py` loads six real IRAS resident-rate
+schedules YA2003-2024 (`data/tax_brackets_historical.json`, Data.gov.sg/IRAS, primary/official —
+see `docs/findings.md` #12) and calibrates both a discrete-jump and a smooth 50-year projection
+from the real revision history (confirms Scenario A's frozen-threshold assumption is actually
+what happened, not a simplification; supplies real calibration for Scenario B's "±x points"
+instead of an arbitrary x). Shows the T1 11.5%-relief crossover only exists from the YA2024
+reform onward — it didn't exist from YA2007-2023.
+
+Still open:
+- Scenario C (stochastic schedule) — `random_policy_shift_path` in `srs_simulation.py` is a
+  Poisson-shock version of this but isn't calibrated against the real 3-revisions-in-17-years
+  history the way the discrete/smooth projections now are.
+- The inflation/GDP correlation extension (Oxford Economics / Capital Economics / SingStat /
+  BIS) — explicitly deferred, not attempted in this pass.
+- Only 6 waypoints (YA2003, 2006, 2007, 2012, 2017, 2024) are confirmed from a primary
+  government source (Data.gov.sg dataset `d_f73055c69144d2e7734c28811d3982aa`, attributed to
+  IRAS); no `[VERIFY]` flags were needed since every number came from that one dataset, but a
+  second primary source (IRAS Annual Report / Budget Statement) has not been cross-checked.
+
 ## T5 — Early withdrawal as a real option
 
 Investor has money locked in SRS. Outside opportunities (private equity, property, a business)
@@ -96,11 +115,29 @@ arrive as a Poisson process with rate λ and random excess return. Breaking the 
 plus tax on 100% instead of 50%; versus a later qualifying withdrawal the extra cost is
 `effective_early_penalty(τ) = 0.05 + 0.5τ` (8.5%–17%).
 
-- Derive the threshold excess return at which paying the penalty is worth it, by bracket and by
-  time remaining to the locked-in age.
-- This settles a practitioner dispute: Investment Moats argues early withdrawal can pay for
-  high-bracket savers; a commenter disputes it. The model should show it depends on the income in
-  the withdrawal year.
+**Done:** `early_exit_breakeven_excess(balance, years_to_lock, r_forecast, other_income,
+brackets)` in `srs_simulation.py` gives the threshold excess return (over just staying invested)
+an outside opportunity must clear to be worth breaking the lock-up for — by bracket (via
+`other_income`) and by time remaining (`years_to_lock`), exactly as asked. `early_exit_threshold_by_bracket`
+sweeps both axes at once: at a $1m pot, 5 years to lock, the bar rises from 6.5% (no other income)
+to 7.3% ($500k other income) — confirming the dispute settles in favour of "it depends on the
+income in the withdrawal year", not a flat yes/no. The bar falls as years-to-lock rises (more time
+for a smaller annual excess to compound into the same catch-up), consistent intuition, test-pinned.
+
+The Poisson-arrival process itself is modelled by `poisson_opportunity_counts` (opportunities/year,
+rate λ) and `draw_excess_returns` (each arriving opportunity's excess return, exponential, mean
+set by the caller); `simulate_early_exit_path`/`simulate_early_exit_portfolio` run many simulated
+lifetimes and report the fraction that ever see a good-enough offer before the natural unlock, and
+how early. Base case (λ=0.2/yr, mean excess 5%, $1m-ish pot): ~50% of simulated lifetimes take an
+early exit at some point, median in year 2 of the 10-year window if it happens at all. 8 tests in
+`tests/test_srs_simulation.py`.
+
+**Still open:** `λ` and the excess-return distribution (exponential, mean 5%) are illustrative
+placeholders, not calibrated to real private-equity/property/small-business deal flow or return
+data for a Singapore-resident investor — no such base-rate source was identified this pass.
+Treat the *shape* of the result (the bar depends on income and on time-to-lock) as the finding;
+treat the *specific* 50% headline figure as sensitive to those two placeholder assumptions.
+
 - Nearest literature: Beshears et al., "Optimal Illiquidity" (JFE 2025,
   https://www.nber.org/papers/w27459). No paper found models this exact problem.
 

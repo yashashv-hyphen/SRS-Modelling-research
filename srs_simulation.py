@@ -311,6 +311,131 @@ def early_exit_breakeven_return(balance_now, years_to_lock, r_forecast, other_in
     return (stay_value / net_if_broken) ** (1.0 / years_to_lock) - 1.0
 
 
+def early_exit_breakeven_excess(balance_now, years_to_lock, r_forecast, other_income=0.0, brackets=None):
+    """
+    `early_exit_breakeven_return` gives the breakeven ABSOLUTE external return. Outside
+    opportunities in T5 (private equity, property, a business) are naturally described by how
+    much EXTRA they pay over just staying invested in the market at `r_forecast` -- this is
+    that number: breakeven_return - r_forecast. None/inf propagate unchanged (no time left to
+    lock, or the early-exit penalty already consumes the whole balance).
+    """
+    thr = early_exit_breakeven_return(balance_now, years_to_lock, r_forecast, other_income, brackets)
+    if thr is None or thr == float("inf"):
+        return thr
+    return thr - r_forecast
+
+
+# --------------------------------------------- 5. early exit as a real option (open task T5)
+# docs/open-tasks.md T5: outside opportunities (PE, property, a business) arrive as a Poisson
+# process with rate lambda and a random excess return; breaking the SRS lock-up to take one
+# costs 5% plus tax on 100% instead of 50% (early_exit_breakeven_excess, above, is the
+# per-event payoff this section's random arrivals get compared against).
+def poisson_opportunity_counts(years, lam=0.2, rng=None):
+    """How many outside investment opportunities arrive in each of `years` years, as
+    independent Poisson(lam) draws. `lam` is opportunities per year -- most years draw 0; it's
+    the rate parameter T5 asks for, not a probability, so values above 1 are legitimate (more
+    than one opportunity can arrive in the same year)."""
+    rng = rng or np.random.default_rng()
+    return rng.poisson(lam, size=years).tolist()
+
+
+def draw_excess_returns(n, mean_excess=0.05, rng=None):
+    """The excess return (over just staying in the market) offered by each of `n` arriving
+    opportunities, drawn from an exponential distribution: always positive -- nobody chases an
+    outside deal that pays worse than staying invested -- occasionally large, with mean
+    `mean_excess`. This is T5's 'random excess return'."""
+    rng = rng or np.random.default_rng()
+    if n == 0:
+        return []
+    return rng.exponential(mean_excess, size=n).tolist()
+
+
+def simulate_early_exit_path(balance_path, r_forecast, other_income_path=None, brackets_path=None,
+                              lam=0.2, mean_excess=0.05, rng=None):
+    """
+    One simulated lifetime's worth of early-exit temptation, year by year, for as long as
+    `balance_path` (the SRS balance at the start of each remaining year before the natural
+    unlock) still has years left to run.
+
+    Each year, `years_to_lock` years still separate the saver from the natural, penalty-free
+    unlock. Opportunities arrive per `poisson_opportunity_counts`; if one or more arrive, the
+    BEST excess return on offer that year (`draw_excess_returns`) is compared against
+    `early_exit_breakeven_excess` for that balance/years_to_lock/income/tax-schedule combination.
+    The first year an offer clears that bar, the lock-up is broken and the simulated lifetime
+    stops there (the money has left SRS); a lifetime that never sees a good-enough offer simply
+    runs out the years_to_lock clock with the decision never triggered -- matching T5's "explore
+    WHEN early withdrawal is worth it", not "assume it always/never happens".
+
+    Returns one row per simulated year up to and including an exit (if any).
+    """
+    rng = rng or np.random.default_rng()
+    n_years = len(balance_path) - 1
+    rows = []
+    for year in range(n_years):
+        years_to_lock = n_years - year
+        balance = balance_path[year]
+        oi = other_income_path[year] if other_income_path else 0.0
+        brackets = brackets_path[year] if brackets_path else None
+        threshold = early_exit_breakeven_excess(balance, years_to_lock, r_forecast, oi, brackets)
+        count = poisson_opportunity_counts(1, lam, rng)[0]
+        offers = draw_excess_returns(count, mean_excess, rng)
+        best_offer = max(offers) if offers else None
+        exited = (best_offer is not None and threshold is not None
+                  and threshold != float("inf") and best_offer >= threshold)
+        rows.append({"year": year, "years_to_lock": years_to_lock, "balance": balance,
+                     "opportunities_seen": count, "best_excess_offer": best_offer,
+                     "breakeven_excess_return": threshold, "exited": exited})
+        if exited:
+            break
+    return rows
+
+
+def simulate_early_exit_portfolio(balance_path, r_forecast, other_income_path=None, brackets_path=None,
+                                   lam=0.2, mean_excess=0.05, n_paths=500, seed=None):
+    """
+    Run `simulate_early_exit_path` `n_paths` times over the SAME balance/income/tax path --
+    only the opportunity arrivals and their sizes are random -- and summarise: across many
+    plausible futures, how often does a good-enough outside opportunity ever actually show up
+    before the money unlocks naturally, and how early? This is the honest "will this happen"
+    answer T5 asks for, as odds rather than a single deterministic breakeven number.
+    """
+    rng = np.random.default_rng(seed)
+    paths = [simulate_early_exit_path(balance_path, r_forecast, other_income_path, brackets_path,
+                                       lam, mean_excess, rng) for _ in range(n_paths)]
+    exited = [p for p in paths if p and p[-1]["exited"]]
+    exit_years = [p[-1]["year"] for p in exited]
+    return {
+        "n_paths": n_paths, "lam": lam, "mean_excess": mean_excess,
+        "fraction_that_ever_exit_early": len(exited) / n_paths,
+        "exit_year_given_exit": {
+            "median": float(np.median(exit_years)) if exit_years else None,
+            "p10": float(np.percentile(exit_years, 10)) if exit_years else None,
+            "p90": float(np.percentile(exit_years, 90)) if exit_years else None,
+        } if exit_years else None,
+        "breakeven_excess_return_by_year": [row["breakeven_excess_return"] for row in paths[0]],
+    }
+
+
+def early_exit_threshold_by_bracket(balance, years_to_lock_grid=(1, 3, 5, 9),
+                                     incomes=DEFAULT_INCOME_GRID, r_forecast=0.05, brackets=None):
+    """
+    How the breakeven excess return (the bar an outside opportunity must clear to justify
+    breaking the lock-up) moves with the saver's OTHER income in the exit year and with how
+    many years are left before the money would have unlocked naturally anyway.
+
+    This settles T5's practitioner dispute computationally: Investment Moats argues early
+    withdrawal can pay for high-bracket savers; a commenter disputes it. Both are right about
+    different incomes -- this table is the actual dependence on income the open task asked the
+    model to show, rather than a yes/no answer.
+    """
+    rows = []
+    for income in incomes:
+        for ytl in years_to_lock_grid:
+            thr = early_exit_breakeven_excess(balance, ytl, r_forecast, other_income=income, brackets=brackets)
+            rows.append({"other_income": income, "years_to_lock": ytl, "breakeven_excess_return": thr})
+    return rows
+
+
 # ------------------------------------------------------------- putting it together per path
 def simulate_one_path(chargeable, contribution=m.CAP_CITIZEN, contrib_years=29, draw_years=10,
                        mean_return=0.05, vol=0.15, wage_growth=0.02, shock_prob=0.03,
@@ -586,3 +711,32 @@ if __name__ == "__main__":
     write_walkthrough(grid_results, "docs/simulation-walkthrough.md",
                       return_rows=return_rows, tax_rows=tax_rows)
     print("wrote docs/simulation-walkthrough.md")
+
+    # T5: early exit as a real option. Base case balance path = the base-case SRS balance at
+    # each year of the 10-year window (docs/findings.md base case), lam=0.2 opportunities/year,
+    # mean 5% excess return on offer when one arrives.
+    base_run = m.run()
+    pot = base_run["srs_at_retirement"]
+    draw_years = 10
+    balance_path_demo = [pot * (1 - i / draw_years) for i in range(draw_years + 1)]
+    portfolio = simulate_early_exit_portfolio(balance_path_demo, r_forecast=0.05,
+                                              lam=0.2, mean_excess=0.05, n_paths=2000, seed=42)
+    threshold_table = early_exit_threshold_by_bracket(pot, r_forecast=0.05)
+    with open("results_early_exit.json", "w") as f:
+        json.dump({"portfolio": portfolio, "threshold_by_bracket": threshold_table},
+                 f, indent=1, default=float)
+    print("\nT5 -- early exit as a real option (base-case pot, lam=0.2/yr, mean excess 5%):")
+    print(f"  fraction of simulated lifetimes that ever take an early exit: "
+         f"{portfolio['fraction_that_ever_exit_early']:.1%}")
+    if portfolio["exit_year_given_exit"]:
+        print(f"  given an exit happens, year (of {draw_years}): "
+             f"p10={portfolio['exit_year_given_exit']['p10']:.1f}  "
+             f"median={portfolio['exit_year_given_exit']['median']:.1f}  "
+             f"p90={portfolio['exit_year_given_exit']['p90']:.1f}")
+    print("  breakeven excess return needed, by other income (years_to_lock=5):")
+    for row in threshold_table:
+        if row["years_to_lock"] == 5:
+            thr = row["breakeven_excess_return"]
+            thr_s = f"{thr:.1%}" if isinstance(thr, float) and thr != float("inf") else str(thr)
+            print(f"    other_income=${row['other_income']:>9,}   breakeven={thr_s}")
+    print("wrote results_early_exit.json")

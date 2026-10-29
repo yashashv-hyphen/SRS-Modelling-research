@@ -192,7 +192,50 @@ about 10%, which Singapore's effective range brackets.
 $15,300 a year for 29 years: **$446,820** at 0.05% versus **$953,537** at 5%. The gap (~$507k) is
 roughly ten times the undiscounted lifetime relief (29 × $1,759.50 = $51,026).
 
-## 12. Discrepancies with earlier documents
+## 12. Model 3 — tax regime: real history and 50-year projection
+
+Six real IRAS resident-rate schedules, YA2003-2024 (Data.gov.sg/IRAS, "Tax Rates for Individual
+Income Tax" open dataset, https://data.gov.sg/dataset/tax-rates-for-individual-income-tax,
+resource_id `d_f73055c69144d2e7734c28811d3982aa` — see `data/tax_brackets_historical.json`),
+loaded and projected by `srs_tax_regime.py` (`test_srs_tax_regime.py`).
+
+**Thresholds never move.** The $20,000 / $30,000 / $40,000 / $80,000 band edges are identical
+across every schedule from YA2003 to YA2024 — 21+ years. Bracket creep in this project
+(`bracket_creep_income` in `srs_simulation.py`) is modelling the *observed* mechanism, not an
+assumption. (`test_thresholds_up_to_80k_never_moved`)
+
+**Only three real revisions since the schedule settled (YA2007):** YA2012 (restructure, top
+rate unchanged at 20%), YA2017 (+2pp, top rate to 22%), YA2024 (+2pp, top rate to 24%) — one
+every ~5.7 years on average, average step +1.33pp including the zero. (`test_calibration_facts`)
+
+**The 11.5%-relief crossover (docs/findings.md #7) did not exist before 2024.** Under every
+schedule from YA2007 to YA2023 the top rate (20-22%) never exceeded 2 × 11.5% = 23%, so there
+was no pot size at which an 11.5%-bracket saver should stop contributing — contributing was
+*always* worth it. The YA2024 reform (top rate to 24%) created the plateau for the first time,
+at the same $15,443,470 this project's closed form gives today. (`test_historical_frontier_matches_findings_closed_form`)
+
+**The 7%-relief crossover moved around before settling.** YA2003-2006: $1,235,478 (first band
+exceeding 14% was the $320k edge at 19-20%). The 2007 rate cut pushed the >14% threshold up to
+the (then) top band, moving the crossover to $2,470,955 — the single highest the 7% crossover
+has ever been. The 2012 restructuring (new $120k band) brought it back down to $1,853,216,
+where it has stayed through YA2024. (`test_tc_seven_percent_doubled_from_2003_to_2007`)
+
+**50-year projection, two scenarios calibrated to the same long-run total.** `project_discrete`
+applies the historical average step (+1.33pp) every historical average interval (5.7 years);
+`project_smooth` applies +0.235pp/year continuously — chosen so both reach (almost) the same
+cumulative drift by year 50, isolating the actual question (lumpy vs. continuous) from
+magnitude. At tc = 11.5%, the $15,443,470 crossover created by the 2024 reform erodes as the
+regime drifts up — by +50 years, discrete gives $1,853,216, smooth gives $1,235,478 (discrete
+lags smooth because its first jump hasn't landed until year 6). (`test_projection_crossover_falls_as_regime_drifts_up`)
+
+**Not modelled (deliberately out of scope for this pass):** inflation/GDP correlation
+(Oxford Economics / SingStat / BIS) — see `docs/open-tasks.md` T4. **Flag for the
+supervisor:** the finding that thresholds are nominally frozen in real history *supports*
+rather than conflicts with the project's existing nominal-SGD-no-inflation convention, so no
+convention change is proposed here — noting this explicitly since Model 3 was the item most
+likely to require one.
+
+## 13. Discrepancies with earlier documents
 
 The earlier dossier, slide deck and chat answers contain these small errors. The model and this
 file are authoritative.
@@ -207,3 +250,40 @@ file are authoritative.
 | 11.5% crossover "~$8m" | indifferent from ~$8m, loses above $15,443,470 | plateau, not a crossing |
 | Exemption covers growth below "~4.7%" | 4.56% | |
 | "12% cap makes breaking the lock-up tractable" | early-withdrawal extra cost up to ~17% | cap only applies to qualifying withdrawals |
+
+## 14. Early withdrawal as a real option (T5)
+
+`srs_simulation.py`'s `early_exit_breakeven_excess(balance, years_to_lock, r_forecast,
+other_income, brackets)` gives the excess return (over just staying invested) an outside
+opportunity must offer to justify breaking the lock-up now rather than waiting for the natural,
+penalty-free unlock. At a $953,537 pot (the base case's pot at 64, docs/findings.md §3), 5 years
+to lock, r_forecast = 5%:
+
+| Other income in the exit year | Breakeven excess return needed |
+|---|---|
+| $0 | 6.5% |
+| $100,000 | 6.7% |
+| $300,000 | 7.1% |
+| $500,000 | 7.3% |
+
+(`test_early_exit_threshold_rises_with_other_income`) **This settles the Investment Moats /
+commenter dispute (docs/open-tasks.md T5) in favour of "it depends"**: the bar a high-bracket
+saver's outside opportunity must clear is measurably higher than a saver with no other income,
+because the early withdrawal is 100%-taxable (not 50%) and lands on top of whatever else they
+earned that year. Neither side of the practitioner argument is simply right or wrong — each is
+describing a different point on this table.
+
+The bar also falls as more years remain before the natural unlock (`test_early_exit_threshold_falls_with_more_years_to_lock`):
+with only 1 year left, the outside opportunity has to beat a much higher bar than with 9 years
+left, because a smaller annual edge has longer to compound into the same catch-up.
+
+**Simulated arrival** (`poisson_opportunity_counts`, `draw_excess_returns`,
+`simulate_early_exit_portfolio`): opportunities arrive at rate λ/year, each offering a random
+excess return (exponential, mean set by the caller). At λ = 0.2/yr and mean excess 5%, roughly
+**half of simulated 10-year windows see at least one offer good enough to trigger an early
+exit**, typically by year 2 of the window if it happens at all. λ and the 5% mean are illustrative
+placeholders — no base-rate source for how often a Singapore-resident SRS saver actually
+encounters a genuine outside deal was identified this pass, so the *shape* of the result (the
+bar depends on income and on time-to-lock; a non-trivial fraction of lifetimes see a good enough
+offer) is the finding; the specific 50% headline is sensitive to those placeholders and
+shouldn't be quoted on its own.
