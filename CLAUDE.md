@@ -16,15 +16,20 @@ srs_simulation.py             Monte Carlo engine: random returns/tax-creep, MPC 
 srs_walkthrough.py            renders srs_simulation.py's output as plain-language Markdown
 srs_dashboard.py              interactive Streamlit UI over srs_simulation.py
 srs_tax_regime.py             Model 3: real historical IRAS brackets (YA2003-2024) + calibrated
-                               50-year discrete/smooth projections (extends srs_model.py)
+                               50-year discrete/smooth projections, plus a backward-looking
+                               tax-change-vs-macro correlation check (extends srs_model.py /
+                               srs_simulation.py)
 data/tax_brackets_ya2026.json IRAS resident rates — the only place *current* brackets live
 data/tax_brackets_historical.json six real historical schedules, Data.gov.sg/IRAS, with source
+data/sg_macro_tax_history_2003_2025.csv annual CPI/GDP + tax-change flag, 2003-2025 — [VERIFY]
+                               primary source
 tests/test_srs_model.py       21 regression tests pinning every verified number
 tests/test_srs_simulation.py  47 tests for the simulation engine (zero-noise mode must
                                reproduce the exact base case in test_srs_model.py; 8 cover
                                the T5 early-exit-as-a-real-option Poisson model)
-tests/test_srs_tax_regime.py  11 tests for the tax-regime model, cross-checked against the
-                               closed-form crossover in docs/findings.md #7
+tests/test_srs_tax_regime.py  15 tests for the tax-regime model, cross-checked against the
+                               closed-form crossover in docs/findings.md #7; 4 cover the
+                               macro-correlation extension
 docs/srs-rules.md             scheme rules incl. the annuity clause, with sources
 docs/findings.md              verified results and where each number comes from
 docs/open-tasks.md            what to build next, in priority order

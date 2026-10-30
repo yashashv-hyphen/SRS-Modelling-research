@@ -97,12 +97,26 @@ what happened, not a simplification; supplies real calibration for Scenario B's 
 instead of an arbitrary x). Shows the T1 11.5%-relief crossover only exists from the YA2024
 reform onward — it didn't exist from YA2007-2023.
 
+**Done (macro correlation, backward-looking only):** `macro_correlation_facts` /
+`macro_by_direction` in `srs_tax_regime.py`, on a user-supplied `data/sg_macro_tax_history_2003_2025.csv`
+(annual CPI inflation, real/nominal GDP growth, and a tax-change flag/direction, 2003-2025).
+Pooled correlation between "did a change happen" and the prior year's GDP growth/inflation is
+near zero (±0.1) — but splitting by **direction** shows a real pattern: the three cuts (2006,
+2007, 2012) followed much stronger prior-year real GDP growth (avg 7.53%) than the two rises
+(2017, 2024) did (avg 2.68%) — consistent with cutting when the economy can afford it and
+raising when growth has slowed. Only 5 change events in 23 years, so this is suggestive, not
+statistically decisive — flag it to the supervisor as a finding worth a sentence, not a load-
+bearing conclusion. **[VERIFY]**: the macro CSV's primary source (presumably SingStat for
+CPI/GDP) hasn't been confirmed yet.
+
 Still open:
 - Scenario C (stochastic schedule) — `random_policy_shift_path` in `srs_simulation.py` is a
   Poisson-shock version of this but isn't calibrated against the real 3-revisions-in-17-years
   history the way the discrete/smooth projections now are.
-- The inflation/GDP correlation extension (Oxford Economics / Capital Economics / SingStat /
-  BIS) — explicitly deferred, not attempted in this pass.
+- Turning the macro correlation into an actual macro-DRIVEN forecast of future tax rates still
+  needs a *projected* (not actuals-only) inflation/GDP series — Oxford Economics / Capital
+  Economics / SingStat / BIS — which hasn't been sourced. The correlation above explains the
+  past; it doesn't yet feed `project_discrete`/`project_smooth`.
 - Only 6 waypoints (YA2003, 2006, 2007, 2012, 2017, 2024) are confirmed from a primary
   government source (Data.gov.sg dataset `d_f73055c69144d2e7734c28811d3982aa`, attributed to
   IRAS); no `[VERIFY]` flags were needed since every number came from that one dataset, but a

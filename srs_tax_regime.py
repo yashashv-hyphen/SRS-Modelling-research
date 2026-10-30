@@ -3,14 +3,25 @@ SRS tax-regime model (Model 3, URECA NBS26004) — extends srs_model.py / srs_si
 modifies neither.
 
 Resolves the historical-foundation half of docs/open-tasks.md T4: "Look at historical personal
-income tax policies (the brackets) in Singapore. Project the changes into the future." Does NOT
-attempt the inflation/GDP correlation extension (Oxford Economics / SingStat / BIS) — that stays
-open, see docs/open-tasks.md.
+income tax policies (the brackets) in Singapore. Project the changes into the future."
+
+Also now covers the T4 EXTENSION question on the data actually available: does a tax-rate
+change correlate with the macro backdrop (CPI inflation, real/nominal GDP growth)? See
+`macro_correlation_facts` / `macro_by_direction`. This is a BACKWARD-LOOKING empirical check
+only — it does not turn `project_discrete`/`project_smooth` into a macro-driven forecast,
+because that would need a PROJECTED inflation/GDP series (Oxford Economics / Capital Economics
+/ SingStat / BIS), and only 2003-2025 ACTUALS were supplied. Projecting future tax rates off
+future macro forecasts remains open.
 
 Data: data/tax_brackets_historical.json, six real IRAS resident-rate schedules (YA2003, 2006,
 2007, 2012, 2017, 2024) from the Data.gov.sg / IRAS open dataset "Tax Rates for Individual Income
 Tax" (resource_id d_f73055c69144d2e7734c28811d3982aa) — see that file for the full citation and
 confidence note. This is a real historical series, not a hypothetical scenario.
+
+data/sg_macro_tax_history_2003_2025.csv: annual CPI inflation and GDP growth, 2003-2025,
+alongside a tax-change flag/direction for the same years. **[VERIFY]** — user-supplied; exact
+primary source (presumably SingStat for CPI/GDP, IRAS/MOF for the tax figures) not yet
+confirmed against a primary page. Cross-check before this leaves "research in progress."
 
 Three empirical facts drive everything below (see `calibration_facts`):
   1. The $20,000 / $30,000 / $40,000 / $80,000 band thresholds have not moved once in 21+ years
@@ -29,6 +40,7 @@ Everything below works in the same plain-numbers-in/out style as the rest of the
 returns brackets in the (upper, rate) tuple form srs_model.py already consumes via its
 `brackets=` argument.
 """
+import csv
 import json
 import os
 
@@ -37,6 +49,7 @@ import srs_simulation as sim
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _HISTORICAL_PATH = os.path.join(_HERE, "data", "tax_brackets_historical.json")
+_MACRO_PATH = os.path.join(_HERE, "data", "sg_macro_tax_history_2003_2025.csv")
 
 ANCHOR_YA = 2007  # first YA of the multi-year-stable schedule; 2003/2006 were the tail end of
                    # an earlier phased cut and aren't representative of a steady-state regime
@@ -86,6 +99,101 @@ def calibration_facts(history=None, anchor_ya=ANCHOR_YA):
 
 
 FACTS = calibration_facts()
+
+
+# ------------------------------------------------- macro correlation (T4 extension, backward-only)
+def load_macro_history(path=_MACRO_PATH):
+    """Annual Singapore CPI inflation, real/nominal GDP growth and a tax-change flag/direction
+    for that Year of Assessment, 2003-2025 (see module docstring — [VERIFY] primary source).
+    `prior_year_*` columns are last year's figures, carried alongside this year's, because a
+    Budget decided for year Y is set on data known before Y, not Y's own (not-yet-known) outcome."""
+    with open(path, newline="") as f:
+        rows = list(csv.DictReader(f))
+    numeric_cols = [k for k in rows[0] if k not in ("tax_regime", "change_direction")]
+    for r in rows:
+        for k in numeric_cols:
+            r[k] = float(r[k]) if r[k] != "" else None
+    return rows
+
+
+MACRO = load_macro_history()
+
+
+def _pearson(a, b):
+    n = len(a)
+    ma, mb = sum(a) / n, sum(b) / n
+    cov = sum((x - ma) * (y - mb) for x, y in zip(a, b))
+    sa = sum((x - ma) ** 2 for x in a) ** 0.5
+    sb = sum((y - mb) ** 2 for y in b) ** 0.5
+    return cov / (sa * sb) if sa and sb else 0.0
+
+
+def macro_correlation_facts(macro=None):
+    """
+    Does a Year-of-Assessment tax change correlate with the macro backdrop? Computed two ways
+    on the real 2003-2025 data (docs/open-tasks.md T4's extension question, answered on what
+    was actually supplied -- NOT a basis for projecting future rates from future macro
+    forecasts, since no forecast series exists here, only actuals).
+
+    Only 5 tax-change years out of 23 -- correlations below are a genuine empirical finding on
+    real data, but the sample is small enough that they're suggestive, not decisive. Report
+    `avg_..._change_years` vs `avg_..._other_years` alongside the correlation coefficient, not
+    instead of it.
+    """
+    macro = macro or MACRO
+    changed = [r for r in macro if r["tax_change_this_ya"] == 1.0]
+    unchanged = [r for r in macro if r["tax_change_this_ya"] == 0.0]
+
+    def avg(rows, key):
+        vals = [r[key] for r in rows if r[key] is not None]
+        return sum(vals) / len(vals) if vals else None
+
+    flag = [r["tax_change_this_ya"] for r in macro]
+    prior_cpi = [r["prior_year_cpi_inflation_pct"] for r in macro]
+    prior_gdp = [r["prior_year_real_gdp_growth_pct"] for r in macro]
+    concurrent_cpi = [r["cpi_inflation_pct"] for r in macro]
+    concurrent_gdp = [r["real_gdp_growth_pct"] for r in macro]
+    return {
+        "n_change_years": len(changed), "n_other_years": len(unchanged),
+        "avg_prior_year_cpi_inflation_change_years": avg(changed, "prior_year_cpi_inflation_pct"),
+        "avg_prior_year_cpi_inflation_other_years": avg(unchanged, "prior_year_cpi_inflation_pct"),
+        "avg_prior_year_real_gdp_growth_change_years": avg(changed, "prior_year_real_gdp_growth_pct"),
+        "avg_prior_year_real_gdp_growth_other_years": avg(unchanged, "prior_year_real_gdp_growth_pct"),
+        "correlation_change_vs_prior_year_cpi": _pearson(flag, prior_cpi),
+        "correlation_change_vs_prior_year_gdp": _pearson(flag, prior_gdp),
+        "correlation_change_vs_concurrent_cpi": _pearson(flag, concurrent_cpi),
+        "correlation_change_vs_concurrent_gdp": _pearson(flag, concurrent_gdp),
+    }
+
+
+def macro_by_direction(macro=None):
+    """
+    Splits macro_correlation_facts' "did a change happen" question into "which DIRECTION" --
+    the pooled correlation above is near zero because cuts and rises pull in opposite
+    directions and cancel out when lumped together as just "changed". Cuts (2006, 2007, 2012)
+    followed strong prior-year real GDP growth (7.4%, 9.0%, 6.2%); rises (2017, 2024) followed
+    much weaker prior-year growth (3.9%, 1.5%) -- consistent with tax cuts when the economy can
+    afford it and rises when growth has slowed, though with only 3 cuts and 2 rises this is a
+    pattern to flag to the supervisor, not a statistically decisive test.
+    """
+    macro = macro or MACRO
+    groups = {"cut": [], "rise": [], "none": []}
+    for r in macro:
+        groups[r["change_direction"] or "none"].append(r)
+
+    def avg(rows, key):
+        vals = [r[key] for r in rows if r[key] is not None]
+        return sum(vals) / len(vals) if vals else None
+
+    return {
+        direction: {
+            "n": len(rows),
+            "years": [int(r["year"]) for r in rows],
+            "avg_prior_year_cpi_inflation": avg(rows, "prior_year_cpi_inflation_pct"),
+            "avg_prior_year_real_gdp_growth": avg(rows, "prior_year_real_gdp_growth_pct"),
+        }
+        for direction, rows in groups.items()
+    }
 
 
 # ----------------------------------------------------------------- 50-year forward projections
@@ -157,6 +265,8 @@ if __name__ == "__main__":
         "calibration_facts": FACTS,
         "historical_frontier": historical_frontier(),
         "projected_frontier": projected_frontier(),
+        "macro_correlation_facts": macro_correlation_facts(),
+        "macro_by_direction": macro_by_direction(),
     }
     with open("results_tax_regime.json", "w") as f:
         json.dump(out, f, indent=1, default=float)
@@ -177,5 +287,14 @@ if __name__ == "__main__":
         d = f"${row['crossover_discrete']:,.0f}" if row["crossover_discrete"] else "none"
         s = f"${row['crossover_smooth']:,.0f}" if row["crossover_smooth"] else "none"
         print(f"  +{row['year']:>2}y  discrete={d:>14}  smooth={s:>14}")
+
+    print("\nTax changes vs. macro backdrop, 2003-2025 (T4 extension, backward-looking):")
+    mc = out["macro_correlation_facts"]
+    print(f"  {mc['n_change_years']} change years out of {mc['n_change_years'] + mc['n_other_years']}")
+    print(f"  pooled correlation (changed vs not) vs prior-yr GDP growth: {mc['correlation_change_vs_prior_year_gdp']:+.3f}  (near zero -- cuts and rises cancel out)")
+    by_dir = out["macro_by_direction"]
+    for d in ("cut", "rise"):
+        row = by_dir[d]
+        print(f"  {d:>5}s ({row['years']}): avg prior-yr real GDP growth = {row['avg_prior_year_real_gdp_growth']:.2f}%")
 
     print("\nwrote results_tax_regime.json")

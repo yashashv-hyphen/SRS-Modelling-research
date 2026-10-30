@@ -114,6 +114,39 @@ def test_zero_years_projection_is_a_no_op():
     assert smooth[0] == discrete[0]
 
 
+# --------------------------------------------------- macro correlation (T4 extension, backward-only)
+def test_macro_history_loads_all_23_years():
+    assert len(tr.MACRO) == 23
+    assert [int(r["year"]) for r in tr.MACRO] == list(range(2003, 2026))
+
+
+def test_five_change_years_match_the_bracket_history():
+    # the macro CSV's own tax_change_this_ya flag should agree with the revision years
+    # already established from data/tax_brackets_historical.json (2006, 2007, 2012, 2017, 2024
+    # -- the two phased-cut years before the anchor, plus the three post-anchor revisions)
+    changed_years = [int(r["year"]) for r in tr.MACRO if r["tax_change_this_ya"] == 1.0]
+    assert changed_years == [2006, 2007, 2012, 2017, 2024]
+
+
+def test_pooled_change_correlation_is_weak():
+    # lumping cuts and rises together as just "changed" should wash out any signal -- the real
+    # pattern only appears once direction is split out (see test below)
+    facts = tr.macro_correlation_facts()
+    assert abs(facts["correlation_change_vs_prior_year_gdp"]) < 0.2
+    assert abs(facts["correlation_change_vs_prior_year_cpi"]) < 0.2
+
+
+def test_cuts_followed_stronger_growth_than_rises():
+    # docs/findings.md's macro finding: cuts (2006/2007/2012) followed much stronger prior-year
+    # real GDP growth than rises (2017/2024) did
+    by_dir = tr.macro_by_direction()
+    assert by_dir["cut"]["n"] == 3
+    assert by_dir["rise"]["n"] == 2
+    assert by_dir["cut"]["avg_prior_year_real_gdp_growth"] > by_dir["rise"]["avg_prior_year_real_gdp_growth"]
+    assert close(by_dir["cut"]["avg_prior_year_real_gdp_growth"], 7.53, 0.05)
+    assert close(by_dir["rise"]["avg_prior_year_real_gdp_growth"], 2.68, 0.05)
+
+
 if __name__ == "__main__":
     import inspect
     tests = [f for name, f in list(globals().items()) if name.startswith("test_") and inspect.isfunction(f)]

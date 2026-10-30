@@ -287,3 +287,38 @@ encounters a genuine outside deal was identified this pass, so the *shape* of th
 bar depends on income and on time-to-lock; a non-trivial fraction of lifetimes see a good enough
 offer) is the finding; the specific 50% headline is sensitive to those placeholders and
 shouldn't be quoted on its own.
+
+## 15. Tax changes vs. the macro backdrop (T4 extension, backward-looking)
+
+`srs_tax_regime.py`'s `macro_correlation_facts` / `macro_by_direction`, run against
+`data/sg_macro_tax_history_2003_2025.csv` (annual CPI inflation and real/nominal GDP growth
+alongside a tax-change flag, 2003-2025 — **[VERIFY]** primary source, presumably SingStat for
+the macro figures). 5 of the 23 years had a tax change: cuts in 2006, 2007, 2012; rises in 2017,
+2024 (`test_five_change_years_match_the_bracket_history`, consistent with the revision years
+already established in `data/tax_brackets_historical.json`).
+
+**Pooled correlation is near zero** — whether a change happened at all, against the prior
+year's GDP growth or inflation, is essentially uncorrelated (±0.1,
+`test_pooled_change_correlation_is_weak`). That's expected: cuts and rises pull in opposite
+directions and cancel out when lumped together as just "changed".
+
+**Splitting by direction shows a real pattern:**
+
+| Direction | Years | Avg prior-year real GDP growth |
+|---|---|---|
+| Cut | 2006, 2007, 2012 | 7.53% |
+| Rise | 2017, 2024 | 2.68% |
+
+(`test_cuts_followed_stronger_growth_than_rises`) Every cut followed a year of strong growth
+(7.4%, 9.0%, 6.2%); both rises followed markedly weaker growth (3.9%, 1.5%) — consistent with
+Singapore cutting personal tax rates when the economy can afford it and raising them once growth
+has slowed. **Caveat stated plainly:** 5 events in 23 years is a small sample — this is a real
+pattern in the actual data, not a statistically decisive test, and shouldn't be presented as
+more than that.
+
+**What this does not do:** turn `project_discrete`/`project_smooth` into a macro-driven
+forecast. That would require a *projected* (not actuals-only) inflation/GDP series — the
+original ask was Oxford Economics / Capital Economics / SingStat / BIS forecasts — which this
+CSV doesn't contain (2003-2025 is all realised history). The 50-year projections still drift at
+the fixed calibrated rate from finding #12; this finding explains part of *why* past changes
+happened, it doesn't yet predict *when* future ones will.
