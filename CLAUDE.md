@@ -23,7 +23,7 @@ data/tax_brackets_ya2026.json IRAS resident rates — the only place *current* b
 data/tax_brackets_historical.json six real historical schedules, Data.gov.sg/IRAS, with source
 data/sg_macro_tax_history_2003_2025.csv annual CPI/GDP + tax-change flag, 2003-2025 — [VERIFY]
                                primary source
-tests/test_srs_model.py       21 regression tests pinning every verified number
+tests/test_srs_model.py       24 regression tests pinning every verified number
 tests/test_srs_simulation.py  47 tests for the simulation engine (zero-noise mode must
                                reproduce the exact base case in test_srs_model.py; 8 cover
                                the T5 early-exit-as-a-real-option Poisson model)
@@ -84,7 +84,9 @@ Run the tests before and after any change to `srs_model.py` or `srs_simulation.p
    up to ~17%. Don't cite the 12% cap for early withdrawal.
 3. **Gross vs chargeable income.** "$100k income" as gross salary is ~$79,800 chargeable after
    employee CPF relief (~$19,200, assuming the $8,000/month ordinary wage ceiling) and $1,000 earned
-   income relief — that's the 7% band, not 11.5%.
+   income relief — that's the 7% band, not 11.5%. Use `m.chargeable_from_gross(gross_income)`
+   rather than hand-converting — the dashboard's income input takes gross and calls this
+   itself, never asking the user to pre-compute a chargeable figure.
 4. **The "$40,000 a year tax-free" rule** only drains a pot of ≤ $308,869 at 5% in ten years. It is
    a threshold, not a strategy. Level drawdown beat it by $69,190 of tax on a ~$954k pot.
 5. **The participation frontier is a staircase.** Wide bands create flat plateaus (the 11.5% bracket

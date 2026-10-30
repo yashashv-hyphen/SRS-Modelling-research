@@ -49,6 +49,22 @@ def test_relief_straddles_band_edge():
     assert close(m.relief_value(88_000), 1_431.00, 0.01)
 
 
+def test_chargeable_from_gross_matches_the_documented_100k_example():
+    # docs/findings.md #4 / CLAUDE.md pitfall #3: $100k gross -> ~$79,800 chargeable
+    assert close(m.chargeable_from_gross(100_000), 79_800.0, 0.01)
+
+
+def test_chargeable_from_gross_caps_cpf_relief_at_the_ow_ceiling():
+    # above the $8,000/month OW ceiling, CPF relief stops growing: $200k and $300k gross
+    # should differ by exactly the extra $100k minus nothing (CPF relief is already capped)
+    assert close(m.chargeable_from_gross(300_000) - m.chargeable_from_gross(200_000), 100_000, 0.01)
+
+
+def test_chargeable_from_gross_never_exceeds_gross():
+    for gross in (0, 50_000, 96_000, 200_000, 1_000_000):
+        assert m.chargeable_from_gross(gross) <= gross
+
+
 # ------------------------------------------------------- per-dollar separability
 def test_per_dollar_ratio_value():
     assert close(m.per_dollar_ratio(0.115, 0.07), 0.965 / 0.885, 1e-12)

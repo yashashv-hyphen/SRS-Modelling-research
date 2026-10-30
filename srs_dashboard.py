@@ -271,11 +271,15 @@ def _residual_tax(balance, brackets):
 # ---- sidebar: the inputs, in plain words --------------------------------------------------
 with st.sidebar:
     st.header("Tell me about you")
-    chargeable = st.number_input(
-        "Your taxable income (type any amount)", min_value=0, max_value=5_000_000,
-        value=120_000, step=1_000, format="%d",
-        help="Income after CPF and other reliefs — the number your tax is actually charged on. "
-             "Enter your own figure; every result below is computed for exactly this number.")
+    annual_income = st.number_input(
+        "Your annual income (gross salary)", min_value=0, max_value=5_000_000,
+        value=140_200, step=1_000, format="%d",
+        help="Your gross pay before any reliefs — the number on your payslip, not your tax "
+             "bill. CPF relief and the earned-income relief are worked out for you below.")
+    chargeable = m.chargeable_from_gross(annual_income)
+    st.caption(f"≈ **${chargeable:,.0f}** chargeable income, after an estimated "
+              f"${annual_income - chargeable:,.0f} of CPF relief and the $1,000 earned-income "
+              f"relief — this is the number your tax (and SRS relief) is actually computed on.")
     contribution_caps = {"$15,300 — Citizen / PR": m.CAP_CITIZEN, "$35,700 — Foreigner": m.CAP_FOREIGN}
     contribution_label = st.segmented_control(
         "How much can you pay in each year?", options=list(contribution_caps),
@@ -440,7 +444,7 @@ if tab_zoom.open:
                 {friendly(adv['median']).replace('$', '&#36;')}</div>
               <div style="font-size:17px; color:{MUTED};">richer by the end &nbsp;·&nbsp; <b>{verdict}</b></div>
             </div>""", unsafe_allow_html=True)
-        st.markdown(esc(f"For **${income:,.0f}** taxable income. Depending on luck, between "
+        st.markdown(esc(f"For **${income:,.0f}** chargeable income. Depending on luck, between "
                         f"**{friendly(adv['p10'])}** (unlucky) and **{friendly(adv['p90'])}** (lucky), "
                         f"across {s['n_paths']} simulated lifetimes — SRS came out ahead in "
                         f"**{s['prob_srs_wins']*100:.0f}%** of them."))
