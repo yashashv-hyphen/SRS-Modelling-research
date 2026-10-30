@@ -23,6 +23,7 @@
 8. **No-CGT decomposition — genuinely absent.** No paper decomposes deferred-account value into rate-arbitrage vs shelter-on-growth components for a no-CGT jurisdiction.
 9. **Indifference/participation-region methodology — partially established** (breakeven-tax-rate papers), but a full participation-region map with progressive-bracket plateaus is not in the literature.
 10. **Behavioural defaults/idle cash — established in general, absent for SRS specifically.**
+11. **Popular commentary disputing SRS's value — exists, informal, not peer-reviewed.** Seedly and Investment Moats both carry lay arguments that large SRS balances can "just mean more tax," independently reaching an unformalised version of the project's own breakeven/plateau finding — evidence the intuition circulates, not evidence of fact.
 
 ---
 
@@ -118,6 +119,60 @@ What hasn't been published is the full map across both tax rates, the one you sa
 People tend to stick with whatever option is pre-selected for them, even when switching would clearly pay. The founding paper is Madrian & Shea (2001), "The Power of Suggestion: Inertia in 401(k) Participation and Savings Behavior," *Quarterly Journal of Economics* 116(4):1149–1187 (https://academic.oup.com/qje/article-abstract/116/4/1149/1903159; free working paper version: https://www.nber.org/papers/w7682). When a US company started enrolling workers into its retirement plan automatically, participation jumped, and most people never touched the defaults. In the working paper version, about 75% stayed at the default 3% contribution rate and about 80% stayed in the default money market fund. Benartzi & Thaler and Choi et al. have built a large literature on the same "power of defaults" idea.
 
 SRS has the reverse problem: it has no default investment at all. Money you put in sits as cash until you actively invest it, earning 0.05% a year at the three agent banks (DBS/POSB, OCBC and UOB). An analysis of Ministry of Finance data puts the idle amount at roughly S$5.0 billion in December 2025, 21% of the S$23.88 billion contributed, up from 19% (S$3.9bn of S$20.58bn) in December 2024 (SmartWealth analysis of MOF data, https://www.smartwealth.sg/; DBS/POSB back up the December 2024 figure, https://www.posb.com.sg/personal/articles/retirement/grow-your-srs-savings). The defaults research predicts exactly this. If doing nothing leaves your money in cash, a lot of people will do nothing. No academic study has yet looked at uninvested cash in a voluntary retirement scheme like SRS.
+
+### Stream 11 — Practitioner/community commentary disputing SRS participation value *(not peer-reviewed; included per supervisor request to document the popular counter-argument)*
+Separate in kind from Streams 1–10: these are informal, non-peer-reviewed opinion and forum
+pieces, collected specifically because the project's own Model 1 finding — the participation
+frontier has a real plateau/ceiling above which the next dollar stops paying off
+(`docs/findings.md` §7) — has a lay echo in Singapore personal-finance commentary. None of these
+sources should be cited as evidence of fact; they are evidence that the "don't put too much into
+SRS, you'll just pay more tax" intuition circulates in practice, which is itself the point.
+Archived screenshots for all three are in `docs/literature-screenshots/` since practitioner pages
+change or disappear.
+
+**Seedly, "Does SRS ever not make sense?"** (anonymous post, 4 Nov 2019,
+https://seedly.sg/posts/does-srs-ever-not-make-sense/ — archived:
+`docs/literature-screenshots/seedly-does-srs-ever-not-make-sense.png`). The original poster asks
+directly: "there's an optimum age to start, otherwise, there's a chance we'll end up paying more
+tax at the end, is that possible?" Two commenters reply with back-of-envelope arithmetic, not a
+formal model:
+- **Takingstock** (20 Sep 2019): "The tax issue becomes a problem if a) you are still working when
+  you withdraw from SRS, and b) you are a superb investor able to make your SRS contributions
+  multiply by several times... If you are withdrawing 160k over 10 years, aiyo, you must have at
+  least 160k × 10 = 1.6 million in your SRS... Tax is a good problem to have (compared to losing
+  money)." This is the lay version of the project's own finding that the exit-rate cap is 12% and
+  that large pots are still net-positive, just with a shrinking percentage edge — reached by forum
+  arithmetic rather than the closed form in `docs/findings.md` §5–6.
+- **Loh Tat Tian**, "Founder at PolicyWoke" (19 Sep 2019): "SRS is a deferred tax system... I would
+  advise people to contribute only if you are at least [in the] 7% tax bracket... You will almost
+  confirm save tax when you are at the 11.5% tax bracket." This is an informal, numerically
+  worked version of the project's own `breakeven_tc` condition (`srs_model.py`), arrived at
+  independently and without the closed form.
+
+**Investment Moats, "Can Your SRS Account Lower Your Taxes? Is it Always Better to Contribute to
+SRS Account?"** (Kyith Ng, https://investmentmoats.com/uncategorized/i-spent-1-to-open-a-srs-account-to-fix-the-withdrawal-age/
+— archived: `docs/literature-screenshots/investmentmoats-is-it-always-better-to-contribute-to-srs.png`,
+viewport only; the article is long and the full-page capture timed out). On whether SRS is
+unconditionally worth it: "if your returns are decent, and you belong to a relatively lower tax
+bracket, the difference is minimal. It might be beneficial not to defer the taxes." The piece also
+notes Singapore's absence of capital-gains and dividend tax on ordinary accounts as the reason
+SRS's tax-deferral edge is smaller here than in jurisdictions where the Dammon–Spatt–Zhang
+logic (Stream 3) applies in full: "you lose a lot of the optionality of your wealth by semi-locking
+your money in SRS." Investment Moats is already cited elsewhere in this project
+(`docs/srs-rules.md`, the $1-contribution-locks-the-age trick) as a practitioner source for scheme
+mechanics, not as an academic one.
+
+**HardwareZone Forums, "Advice - Is it a mistake to overly contribute into SRS?"**
+(https://forums.hardwarezone.com.sg/threads/advice-is-it-a-mistake-to-overly-contribute-into-srs.6938941/
+— found via search, **not independently verified**: the thread sits behind an age-verification /
+login wall, and the archived screenshot (`docs/literature-screenshots/hardwarezone-is-it-a-mistake-to-overly-contribute.png`)
+captured only an ad interstitial, not the posts themselves. Listed here as a found-but-inaccessible
+source rather than omitted — per `CLAUDE.md`'s own convention of flagging rather than silently
+dropping unverifiable items. If full-text access becomes available, replace this entry with actual
+quotes before citing it in the paper.
+
+**Scope note:** a targeted search for the same argument on Reddit (r/singaporefi) returned nothing
+on-topic; not included.
 
 ---
 

@@ -28,6 +28,16 @@ Decision to raise with the supervisor before finalising: is the unit the whole a
 dollar (use the rate at `chargeable − contributed so far`)? They differ whenever the contribution
 straddles a band edge, e.g. $88k chargeable gives a 9.35% block rate but a 7% last-dollar rate.
 
+**MAIN analysis, as specified by the supervisor:** portfolio expected return `r` (y-axis) against
+current marginal tax rate `t_c` (x-axis), holding investment horizon `n` and projected ending
+balance fixed, assuming a reasonable tax regime during the withdrawal phase — an
+indifference-curve/heatmap over `per_dollar_ratio(t_c, t_w)` (`docs/methodology-equations-assumptions.md`
+eq. 10–11) at fixed `t_w`. Then vary `(n, ending balance)` across a 2×2 grid and repeat, producing
+four such heatmaps. **Status: underlying equations exist and are tested (eq. 10, 11, 13); the
+literal 2×2 grid of heatmaps has not been built.** All the functions it needs
+(`per_dollar_ratio`, `run`, `advantage_pct`) already exist — this is a sweep-and-plot task, not new
+modelling.
+
 Done when: grid CSVs + figures exist, the boundary matches the closed form, and a test asserts it.
 
 ## T2 — Withdrawal strategy under uncertainty
@@ -56,6 +66,16 @@ Literature anchors (full refs in `docs/literature-review.md`): Ragsdale, Seila &
 Horan (2006) on progressive brackets; DiLellio & Ostrov; the 2025 MPC arXiv preprint
 (https://arxiv.org/pdf/2507.10603, not peer-reviewed). None models a terminal deadline — SRS's is
 a forced-liquidation date, not a US-style minimum-distribution floor.
+
+**MAIN analysis, as specified by the supervisor:** current SRS portfolio size (y-axis) against
+years left to withdraw (x-axis), holding non-SRS income and the current Singapore tax regime
+fixed — each `(x,y)` cell gives the DP's recommended withdrawal amount for that year. Then vary
+non-SRS income across ~4 reasonable levels with different tax implications (e.g. $0, $60k, $120k,
+$200k+). **Status: the DP already computes exactly this grid internally** — `_dp_solve`'s
+`policy0[years_left][balance_i]` array in `srs_simulation.py` *is* this heatmap's data, for one
+income level — but it's discarded after returning the single `action` for the caller's actual
+`(balance, years_left)`. Not yet exposed as a standalone grid output across 4 income levels; a
+thin wrapper around `_dp_solve`, not new modelling.
 
 Done when: a, b and d each have code, figures and at least one test; c is done if data access works.
 
@@ -88,6 +108,14 @@ Every function takes `brackets`, so schedules are swappable.
   Singapore has no Roth-style account, so the only hedge is the ordinary account, which is already
   close to tax-free — note that asymmetry.
 - Output: how the T1 frontier moves under each scenario.
+
+**MAIN analysis, as specified by the supervisor:** show the historical tax regimes as a narrative
+timeline — "in year XXXX, the tax regime was...; in year YYYY, it was..., until today" — then
+linearly (or another simple method) project 10/20/30/40/50 years forward based on the history.
+**Status: closest of the three MAIN analyses to already done.** `HISTORY` (six real schedules with
+their YAs), `project_discrete`, and `project_smooth` at checkpoints `(0,10,20,30,40,50)` already
+produce exactly this data (`results_tax_regime.json`); what's missing is only the literal
+"in year XXXX..." rendered narrative/table, not new modelling.
 
 **Done (historical foundation, Model 3):** `srs_tax_regime.py` loads six real IRAS resident-rate
 schedules YA2003-2024 (`data/tax_brackets_historical.json`, Data.gov.sg/IRAS, primary/official —
@@ -176,6 +204,37 @@ payouts are exempt and must NOT be added here.
 - Find out whether MOF's ~15% average marginal rate (Jan 2019) was measured on assessable or
   chargeable income.
 - Replace the SmartWealth idle-cash estimate (21%, ~S$5.0bn) with primary MOF data if possible.
+
+## T9 — Extension Model 1a: investment universe inside vs. outside SRS
+
+**New, from the supervisor, not yet started.** SRS's investable universe (shares, REITs, ETFs,
+unit trusts, T-bills, SGS bonds, SSBs, approved insurance — `docs/srs-rules.md`) is a strict
+subset of what's available outside, and SRS does not allow leverage. Claim to test: ignoring tax,
+a wider outside universe (plus leverage) produces a strictly better efficient frontier — more
+return for a given risk, less risk for a given return. The supervisor's own open questions: *is
+this true*, and *what's the impact for a fully rational actor with a specified risk tolerance* —
+growth outside could be higher with leverage, but at higher risk; model and simulate it.
+
+This is a different question from the already-answered one in `experiments/radial_vs_parallel_frontier.py`
+(which only asked how the *tax wedge* shifts a frontier, holding the investment universe itself
+fixed — finding: negligibly, ~parallel). T9 asks whether the universe/leverage *restriction itself*
+shrinks the frontier independent of tax, which that experiment did not model. Needs: a real
+efficient-frontier construction (unconstrained vs. SRS-eligible-only asset set, with and without
+leverage) and a utility/risk-tolerance framework to evaluate the trade-off. Not built.
+
+## T10 — Extension Model 4: lifecycle personas
+
+**New, from the supervisor, not yet started.** Supervisor's own sequencing: "once we have model
+for the above 3, then map several different personas and their investment journeys" — flagged as
+well-suited for a URECA poster or news-style write-up. Depends on T1–T4 (and ideally T5/T9) being
+in a presentable state first, since a persona's "journey" is a narrated walk through those models
+at specific parameter values (e.g. a 30-year-old on $80k, a 45-year-old on $250k). Not started.
+
+## Already satisfied: interactive dashboard
+
+The supervisor separately asked for an interactive website dashboard, good for the URECA poster
+presentation. `srs_dashboard.py` already is this — live on Streamlit Community Cloud, built over
+Models 1 and 2. Nothing further needed here beyond keeping it in sync as T9/T10 land.
 
 ## Not modelled yet (state as limitations)
 

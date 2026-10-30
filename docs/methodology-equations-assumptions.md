@@ -143,3 +143,57 @@ here because a methodology section should let a reader see the full set at once:
 (§1); C1's single-country return series and C4's uncalibrated arrival-rate/excess-return
 parameters (§3); D3's frozen-threshold extrapolation and D4's small-sample macro correlation
 (§4). None of these are hidden inside a docstring only the author would find.
+
+## 8. Planned MAIN analyses (visualisation specifications, supervisor-set)
+
+Each model's underlying equations (§2–§4) are implemented and tested. The supervisor separately
+specified one **MAIN analysis** output per model — a specific figure, not just a working formula.
+Honest status of each, so the gap between "the maths works" and "the figure exists" is explicit:
+
+| Model | Specification (supervisor's words, condensed) | Maps to | Status |
+|---|---|---|---|
+| 1 | Portfolio return `r` (y) × marginal tax rate `t_c` (x), horizon and ending balance fixed, reasonable withdrawal-phase regime assumed → indifference-curve heatmap. Repeat across a 2×2 grid of (horizon, ending balance). | Eq. (10), (11), (13) | **Not built.** Every function it needs exists (`per_dollar_ratio`, `run`); this is an unbuilt sweep-and-plot, not new modelling. |
+| 2 | SRS portfolio size (y) × years left (x), non-SRS income and tax regime fixed → DP-recommended withdrawal per cell. Repeat across ~4 income levels. | Eq. (18) | **Not built, but the data already exists internally.** `_dp_solve`'s `policy0[years_left][balance_i]` grid *is* this heatmap for one income level — computed, then discarded after returning a single action. |
+| 3 | Narrative timeline of historical regimes ("in year XXXX, the regime was…"), then a simple (e.g. linear) 10/20/30/40/50-year forward projection. | Eq. (27)–(29) | **Closest to done.** `HISTORY`, `project_discrete`, `project_smooth` already produce this data; only the literal narrative/table rendering is missing. |
+
+None of these three require new equations — §2–§4 already cover the maths each needs. What's
+missing in all three cases is the specific output artifact (a saved figure/table), which is
+implementation work, not research work.
+
+## 9. Extension models (new, not yet started)
+
+Two further models were specified separately from Models 1–3, explicitly as extensions to take up
+once the core three are in a presentable state.
+
+**Model 1a — investment universe inside vs. outside SRS.** SRS's eligible investments
+(`docs/srs-rules.md`) are a strict subset of what's available outside, and SRS disallows leverage.
+Hypothesis to test: ignoring tax, the wider outside universe (+ leverage) gives a strictly better
+efficient frontier — more return per unit of risk, less risk per unit of return. The supervisor's
+own framing: *is this true*, and *what is the impact for a fully rational actor with a specified
+risk tolerance* — growth outside could be higher with leverage, but at correspondingly higher risk.
+**Not the same question as this document's §5 experiment**, which held the investment universe
+fixed and only asked how the *tax wedge* shifts a frontier (finding: negligibly). Model 1a asks
+whether the universe/leverage *restriction itself* shrinks the frontier, independent of tax —
+unanswered. Would need a real efficient-frontier construction (constrained vs. unconstrained asset
+sets, with/without leverage) plus a utility framework for the risk-tolerance question.
+
+**Model 4 — lifecycle personas.** Once Models 1–3 (and ideally T5/T9) are complete, map several
+personas (e.g. a 30-year-old on $80k, a 45-year-old on $250k) through their SRS journey as a
+narrative built on those models' outputs — explicitly suited to a URECA poster or news-style
+write-up, per the supervisor's own note. Not started; depends on the above.
+
+**Already satisfied — interactive dashboard.** The supervisor separately asked for an interactive
+website, good for a poster presentation. `srs_dashboard.py` already is this, live on Streamlit
+Community Cloud, built over Models 1 and 2.
+
+## 10. Practitioner literature: does "too much SRS, too much tax" circulate as a lay argument?
+
+Separate task, separate standard of evidence — not peer-reviewed, included because the project's
+own Model 1 finding (a real participation plateau/ceiling, `docs/findings.md` §7) has a lay echo in
+Singapore personal-finance commentary, and the supervisor asked for it documented even if "not well
+researched." Full writeup with quotes: `docs/literature-review.md`, Stream 11. Three sources found:
+Seedly's "Does SRS ever not make sense?" (archived, fully accessible, two informal but numerically
+worked rebuttals), Investment Moats' "Is it Always Better to Contribute to SRS Account?" (archived,
+accessible), and a HardwareZone Forums thread found but **not independently verified** — it sits
+behind an age-verification wall and the archived screenshot captured only an ad, not the posts.
+Screenshots: `docs/literature-screenshots/`.
