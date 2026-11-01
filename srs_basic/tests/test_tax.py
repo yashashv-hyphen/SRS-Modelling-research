@@ -1,3 +1,5 @@
+# If ran you should get 7 test passed (6 tax checks and 1 marginal rate check)
+
 import pytest
 from srs_basic.config import SCHEDULE_CSV, REGIME
 from srs_basic.tax import load_schedule, tax, band_rate
