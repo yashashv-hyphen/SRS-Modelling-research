@@ -6,3 +6,5 @@ results.json
 results_simulation.json
 .streamlit/secrets.toml
 graphify-out/
+srs_basic/output/*.csv
+.DS_Store
