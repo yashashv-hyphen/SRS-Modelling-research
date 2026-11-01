@@ -4,3 +4,4 @@ altair>=6.0
 numpy>=2.2
 matplotlib
 pytest
+openpyxl
