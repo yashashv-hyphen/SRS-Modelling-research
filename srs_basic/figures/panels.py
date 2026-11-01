@@ -7,17 +7,18 @@ import numpy as np
 import pandas as pd
 from matplotlib.colors import TwoSlopeNorm
 
-from srs_basic.config import REGIME, SCHEDULE_CSV
+from srs_basic import config
 from srs_basic.model1 import grid
 from srs_basic.tax import load_schedule
 
-OUTPUT = Path("srs_basic/output")
-TC_VALUES = np.linspace(0, 0.24, 241)    # 0% to 24% in 0.1% steps
-R_VALUES = np.linspace(0.03, 0.12, 91)   # 3% to 12% in 0.1% steps
+OUTPUT = Path(config.OUTPUT_DIR)
+TC_VALUES = np.linspace(*config.TC_RANGE, config.TC_STEPS)
+R_VALUES = np.linspace(*config.R_RANGE, config.R_STEPS)
+DEFAULTS = {"k": config.K, "other": config.OTHER, "I": config.I}
 LEVELS = [0.25, 0.5, 1.0, 2.0, 4.0]      # labelled contour lines ($ per $1)
 
 
-def sweep_figure(name, title, panels):
+def sweep_figure(name, title, panels, cbar_label=r"SRS advantage per \$1 pre-tax (\$)"):
     """Draw one heatmap per panel, all on the same colour scale.
 
     name   file name without extension, e.g. "fig1_3_horizon"
@@ -25,12 +26,13 @@ def sweep_figure(name, title, panels):
     panels list of (panel_label, grid_kwargs), where grid_kwargs is passed
            to model1.grid, e.g. {"N": 20, "B": 1_000_000}
     """
-    schedule = load_schedule(SCHEDULE_CSV, REGIME)
+    schedule = load_schedule(config.SCHEDULE_CSV, config.REGIME)
 
     # 1. Compute every panel first, so the colour scale can be shared
     results = []
     for label, kwargs in panels:
-        TC, R, EW, A = grid(TC_VALUES, R_VALUES, schedule=schedule, **kwargs)
+        TC, R, EW, A = grid(TC_VALUES, R_VALUES, schedule=schedule,
+                            **{**DEFAULTS, **kwargs})
         results.append((label, kwargs, TC, R, EW, A))
 
     vmin = min(A.min() for *_, A in results)
@@ -39,15 +41,7 @@ def sweep_figure(name, title, panels):
     levels = np.concatenate([np.linspace(vmin, 0, 11)[:-1], np.linspace(0, vmax, 51)])
     norm = TwoSlopeNorm(vmin=vmin, vcenter=0, vmax=vmax)
 
-    # 2. Save the numbers behind every panel in one CSV
-    OUTPUT.mkdir(parents=True, exist_ok=True)
-    frames = []
-    for label, kwargs, TC, R, EW, A in results:
-        frames.append(pd.DataFrame({"panel": label, "tc": TC.ravel(), "r": R.ravel(),
-                                    "exit_rate": EW.ravel(), "advantage": A.ravel()}))
-    pd.concat(frames).to_csv(OUTPUT / f"{name}.csv", index=False)
-
-    # 3. Plot
+    # 2. Plot
     n = len(results)
     fig, axes = plt.subplots(1, n, figsize=(3.6 * n + 1.2, 4.2),
                              sharex=True, sharey=True, constrained_layout=True)
@@ -69,8 +63,15 @@ def sweep_figure(name, title, panels):
     axes[0].set_ylabel("Annual return, r (%)")
 
     cbar = fig.colorbar(fill, ax=axes, shrink=0.9)
-    cbar.set_label(r"SRS advantage per \$1 pre-tax (\$)")
+    cbar.set_label(cbar_label)
     fig.suptitle(title, fontsize=11)
+
+    # 3. Save the PNG, then the numbers behind every panel
+    OUTPUT.mkdir(parents=True, exist_ok=True)
     fig.savefig(OUTPUT / f"{name}.png", dpi=200)
     plt.close(fig)
+    frames = [pd.DataFrame({"panel": label, "tc": TC.ravel(), "r": R.ravel(),
+                            "exit_rate": EW.ravel(), "advantage": A.ravel()})
+              for label, kwargs, TC, R, EW, A in results]
+    pd.concat(frames).to_csv(OUTPUT / f"{name}.csv", index=False)
     print("Saved", OUTPUT / f"{name}.png")

@@ -1,28 +1,33 @@
-"""Figures 1.3 to 1.5: change one parameter at a time from the base case."""
+"""Figures 1.3 to 1.5: change one parameter at a time from the base case.
 
+Run from the repo root: python -m srs_basic.figures.fig1_3_to_1_5_sweeps
+"""
+
+from srs_basic import config
 from srs_basic.figures.panels import sweep_figure
 
-BASE_N, BASE_B = 20, 1_000_000
 
-# Figure 1.3: horizon N, balance fixed at $1M
-sweep_figure(
-    "fig1_3_horizon",
-    "Figure 1.3: varying the horizon N (B = \\$1M, no other income)",
-    [(f"N = {N} years", {"N": N, "B": BASE_B}) for N in (10, 20, 30, 40)],
-)
+def main():
+    N, B = config.N, config.B
 
-# Figure 1.4: balance at retirement B, horizon fixed at 20 years
-sweep_figure(
-    "fig1_4_balance",
-    "Figure 1.4: varying the balance at retirement B (N = 20, no other income)",
-    [(f"B = \\${B/1e6:g}M", {"N": BASE_N, "B": B})
-     for B in (500_000, 1_000_000, 2_000_000, 3_000_000)],
-)
+    sweep_figure(
+        "fig1_3_horizon",
+        f"Figure 1.3: varying the horizon N (B = \\${B/1e6:g}M, whole-balance evaluation)",
+        [(f"N = {n} years", {"N": n, "B": B}) for n in (10, 20, 30, 40)],
+    )
+    sweep_figure(
+        "fig1_4_balance",
+        f"Figure 1.4: varying the balance at retirement B (N = {N}, whole-balance evaluation)",
+        [(f"B = \\${b/1e6:g}M", {"N": N, "B": b})
+         for b in (500_000, 1_000_000, 2_000_000, 3_000_000)],
+    )
+    sweep_figure(
+        "fig1_5_other_income",
+        f"Figure 1.5: varying other retirement income (N = {N}, B = \\${B/1e6:g}M)",
+        [(f"Other income = \\${y/1000:g}k", {"N": N, "B": B, "other": y})
+         for y in (0, 30_000, 60_000)],
+    )
 
-# Figure 1.5: other taxable income in retirement
-sweep_figure(
-    "fig1_5_other_income",
-    "Figure 1.5: varying other retirement income (N = 20, B = \\$1M)",
-    [(f"Other income = \\${y/1000:g}k", {"N": BASE_N, "B": BASE_B, "other": y})
-     for y in (0, 30_000, 60_000)],
-)
+
+if __name__ == "__main__":
+    main()

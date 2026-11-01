@@ -2,7 +2,9 @@ import numpy as np
 import pytest
 from srs_basic.config import SCHEDULE_CSV, REGIME
 from srs_basic.tax import load_schedule
-from srs_basic.model1 import advantage, ratio, pot_from_contribution, terminal_wealth, grid
+from srs_basic.exit_rate import avg_exit_rate
+from srs_basic.model1 import (advantage, ratio, pot_from_contribution,
+                              terminal_wealth, grid)
 
 S = load_schedule(SCHEDULE_CSV, REGIME)
 
@@ -32,9 +34,24 @@ def test_grid_fixed_B_breakeven_is_vertical():
     assert np.allclose(A[:, col], 0)
     assert (A[:, :col] < 0).all() and (A[:, col + 1:] > 0).all()
 
+def test_grid_integer_inputs_keep_fractional_exit_rate():
+    TC, R, EW, A = grid([0, 1], [0, 1], 20, S, B=1_000_000)
+    assert EW.dtype == float
+    assert EW[0, 0] == pytest.approx(0.0125)
+
 def test_grid_fixed_C_exit_rate_rises_with_r():
     TC, R, EW, A = grid(np.linspace(0, 0.24, 5), np.linspace(0.03, 0.12, 10), 20, S, C=15_300)
     assert (np.diff(EW[:, 0]) >= 0).all()
+
+def test_grid_fixed_C_uses_contribution_scaling():
+    C, N, r, tc = 15_300, 20, 0.05, 0.07
+    TC, R, EW, A = grid([tc], [r], N, S, C=C)
+    pot = pot_from_contribution(C, r, N)
+    ew = avg_exit_rate(pot, 10, 0, 0.5, S)
+    # Simulate year by year: each contribution grows to the end
+    srs = sum(C * (1 + r) ** (N - t) for t in range(1, N + 1)) * (1 - ew)
+    non = sum(C * (1 - tc) * (1 + r) ** (N - t) for t in range(1, N + 1))
+    assert A[0, 0] == pytest.approx((srs - non) / (C * N))
 
 def test_grid_needs_exactly_one_of_B_or_C():
     with pytest.raises(ValueError):
