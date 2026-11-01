@@ -4,7 +4,12 @@ __pycache__/
 .playwright-mcp/
 results.json
 results_simulation.json
+results_tax_regime.json
+results_early_exit.json
+experiments/*.json
+experiments/*.png
 .streamlit/secrets.toml
 graphify-out/
 srs_basic/output/*.csv
 .DS_Store
+.venv/

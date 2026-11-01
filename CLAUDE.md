@@ -15,10 +15,21 @@ srs_simulation.py             Monte Carlo engine: random returns/tax-creep, MPC 
                                after-window and early-exit comparisons (extends srs_model.py)
 srs_walkthrough.py            renders srs_simulation.py's output as plain-language Markdown
 srs_dashboard.py              interactive Streamlit UI over srs_simulation.py
-data/tax_brackets_ya2026.json IRAS resident rates — the only place brackets live
-tests/test_srs_model.py       19 regression tests pinning every verified number
-tests/test_srs_simulation.py  17 tests for the simulation engine (zero-noise mode must
-                               reproduce the exact base case in test_srs_model.py)
+srs_tax_regime.py             Model 3: real historical IRAS brackets (YA2003-2024) + calibrated
+                               50-year discrete/smooth projections, plus a backward-looking
+                               tax-change-vs-macro correlation check (extends srs_model.py /
+                               srs_simulation.py)
+data/tax_brackets_ya2026.json IRAS resident rates — the only place *current* brackets live
+data/tax_brackets_historical.json six real historical schedules, Data.gov.sg/IRAS, with source
+data/sg_macro_tax_history_2003_2025.csv annual CPI/GDP + tax-change flag, 2003-2025 — [VERIFY]
+                               primary source
+tests/test_srs_model.py       24 regression tests pinning every verified number
+tests/test_srs_simulation.py  47 tests for the simulation engine (zero-noise mode must
+                               reproduce the exact base case in test_srs_model.py; 8 cover
+                               the T5 early-exit-as-a-real-option Poisson model)
+tests/test_srs_tax_regime.py  15 tests for the tax-regime model, cross-checked against the
+                               closed-form crossover in docs/findings.md #7; 4 cover the
+                               macro-correlation extension
 docs/srs-rules.md             scheme rules incl. the annuity clause, with sources
 docs/findings.md              verified results and where each number comes from
 docs/open-tasks.md            what to build next, in priority order
@@ -31,9 +42,12 @@ docs/simulation-walkthrough.md generated report from srs_simulation.py — regen
 ```
 python tests/test_srs_model.py       # no pytest needed; or: python -m pytest tests/
 python tests/test_srs_simulation.py  # simulation engine tests
+python tests/test_srs_tax_regime.py  # tax-regime model tests
 python srs_model.py                  # base case, writes results.json to the current dir
 python srs_simulation.py             # Monte Carlo grid, writes results_simulation.json
                                       # and docs/simulation-walkthrough.md
+python srs_tax_regime.py             # historical + 50-year projections, writes
+                                      # results_tax_regime.json
 streamlit run srs_dashboard.py       # interactive dashboard, opens in a browser
 ```
 
@@ -70,7 +84,9 @@ Run the tests before and after any change to `srs_model.py` or `srs_simulation.p
    up to ~17%. Don't cite the 12% cap for early withdrawal.
 3. **Gross vs chargeable income.** "$100k income" as gross salary is ~$79,800 chargeable after
    employee CPF relief (~$19,200, assuming the $8,000/month ordinary wage ceiling) and $1,000 earned
-   income relief — that's the 7% band, not 11.5%.
+   income relief — that's the 7% band, not 11.5%. Use `m.chargeable_from_gross(gross_income)`
+   rather than hand-converting — the dashboard's income input takes gross and calls this
+   itself, never asking the user to pre-compute a chargeable figure.
 4. **The "$40,000 a year tax-free" rule** only drains a pot of ≤ $308,869 at 5% in ten years. It is
    a threshold, not a strategy. Level drawdown beat it by $69,190 of tax on a ~$954k pot.
 5. **The participation frontier is a staircase.** Wide bands create flat plateaus (the 11.5% bracket

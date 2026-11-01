@@ -34,8 +34,29 @@ IDLE_RATE = 0.0005          # interest on uninvested SRS cash
 PENALTY = 0.05              # early-withdrawal penalty
 INCLUSION = 0.5             # share of a qualifying withdrawal that is taxable
 
+CPF_EMPLOYEE_RATE = 0.20        # employee CPF contribution rate on Ordinary Wages
+CPF_OW_CEILING_MONTHLY = 8_000  # Ordinary Wage ceiling the employee rate applies up to
+EARNED_INCOME_RELIEF = 1_000.0  # flat relief for a resident under 55 with earned income
+
 
 # ----------------------------------------------------------------------------- tax
+def chargeable_from_gross(gross_income, earned_income_relief=EARNED_INCOME_RELIEF):
+    """
+    Approximate chargeable income from gross annual salary, so callers hand in the number they
+    actually know (gross pay) instead of a number they'd have to compute by hand first.
+    Subtracts the employee CPF contribution relief -- 20% of Ordinary Wages, capped at the
+    $8,000/month OW ceiling (so at most $19,200/year) -- and the flat $1,000 earned-income
+    relief. This is the conversion CLAUDE.md pitfall #3 / docs/findings.md #4 already documents
+    in prose ("$100k gross is ~$79,800 chargeable"); this makes it a function instead of a
+    manual step every caller had to redo.
+
+    Approximation, not a full personal-tax calculator: ignores the Additional Wage (bonus) CPF
+    ceiling, and any other reliefs (spouse, parent, course fees, etc.) a real taxpayer might
+    also claim. Chargeable income this produces is always an upper bound on the true figure.
+    """
+    cpf_relief = min(CPF_EMPLOYEE_RATE * gross_income,
+                     CPF_EMPLOYEE_RATE * CPF_OW_CEILING_MONTHLY * 12)
+    return max(0.0, gross_income - cpf_relief - earned_income_relief)
 def tax(chargeable, brackets=None):
     """Singapore resident income tax on a chargeable income."""
     brackets = brackets or BRACKETS
