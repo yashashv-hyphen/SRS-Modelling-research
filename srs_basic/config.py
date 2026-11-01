@@ -1,0 +1,9 @@
+SCHEDULE_CSV = "data/sg_resident_tax_schedules_YA2003_present.csv"
+REGIME = "YA2024-present"
+I = 0.5          # taxable share of each withdrawal
+K = 10           # years withdrawals are spread over
+OTHER = 0        # other retirement income
+N = 20           # years to retirement
+B = 1_000_000    # SRS balance at retirement
+TC_RANGE = (0.0, 0.24) #refers to the range of the tax rates
+R_RANGE = (0.03, 0.12) #refers to the yearly investment return 
