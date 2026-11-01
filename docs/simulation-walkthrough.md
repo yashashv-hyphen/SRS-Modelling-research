@@ -29,7 +29,7 @@ Across all simulated lifetimes at this income, a tax shock made a dollar not-wor
 
 ## 3. Taking the money out: the smart way pays less tax
 
-The model takes the money out with a **smart plan** that re-decides each year how much to withdraw, based on how your investments actually did (this is the "MPC" strategy). Compared with the popular **"take $40,000 a year"** rule of thumb, the smart plan pays about **$34k less tax** in the middle outcome (range $0 → $144k). The gap is small when tax brackets sit still and grows when a tax shock lands mid-withdrawal.
+The model takes the money out with a **smart plan** that re-decides each year how much to withdraw, based on how your investments actually did (this is the "MPC" strategy). Compared with the popular **"take $40,000 a year"** rule of thumb, the smart plan pays about **$30k less tax** in the middle outcome (range -$126 → $139k). The gap is small when tax brackets sit still and grows when a tax shock lands mid-withdrawal.
 
 ## 4. After the money is out: spend it, or leave it?
 
