@@ -10,4 +10,6 @@ experiments/*.json
 experiments/*.png
 .streamlit/secrets.toml
 graphify-out/
+srs_basic/output/*.csv
+.DS_Store
 .venv/

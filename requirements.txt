@@ -2,3 +2,5 @@ streamlit>=1.59
 pandas>=2.3
 altair>=6.0
 numpy>=2.2
+matplotlib
+pytest
