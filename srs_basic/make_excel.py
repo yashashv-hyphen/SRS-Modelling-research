@@ -10,6 +10,7 @@ Run from the repo root: python -m srs_basic.make_excel
 import math
 from pathlib import Path
 
+from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.formatting.rule import ColorScaleRule
@@ -148,6 +149,20 @@ def _build(wb):
         cell(inp, f"B{i}", val, BLUE, fmt, KEY_FILL)
         cell(inp, f"C{i}", note, Font(name=F, color="595959"))
         name(nm, f"Inputs!$B${i}")
+    rules = [
+        ("B4", "whole", "between", 1, 60, "N must be a whole number of years from 1 to 60."),
+        ("B5", "decimal", "greaterThanOrEqual", 0, None, "B cannot be negative."),
+        ("B6", "whole", "between", 1, 10, "SRS withdrawals can be spread over 1 to 10 years."),
+        ("B7", "decimal", "greaterThanOrEqual", 0, None, "Other income cannot be negative."),
+        ("B8", "decimal", "between", 0, 1, "Enter a share between 0% and 100%."),
+        ("B9", "decimal", "greaterThan", 0, None, "C must be above 0."),
+    ]
+    for ref, kind, op, lo, hi, msg in rules:
+        dv = DataValidation(type=kind, operator=op, formula1=str(lo),
+                            formula2=None if hi is None else str(hi),
+                            showErrorMessage=True, errorTitle="Invalid input", error=msg)
+        inp.add_data_validation(dv)
+        dv.add(ref)
 
     # ---------------- Tax schedule ----------------
     tx = wb.create_sheet("Tax_Schedule")
@@ -272,7 +287,7 @@ def _build(wb):
             cell(f6, f"{L(j)}{hdr}", t, BLUE, PCT0, HDR_FILL)
         for i, r in enumerate(RS, start=hdr + 1):
             cell(f6, f"A{i}", r, BLUE, PCT0, HDR_FILL)
-            cell(f6, f"B{i}", f"=$G${top+1}*((1+$A{i})^$B${top+1}-1)/$A{i}", BLACK, USD)
+            cell(f6, f"B{i}", f"=IF($A{i}=0,$G${top+1}*$B${top+1},$G${top+1}*((1+$A{i})^$B${top+1}-1)/$A{i})", BLACK, USD)
             cell(f6, f"C{i}", "=" + EXIT(f"$B{i}", f"$L${top+1}"), BOLD, PCT2, KEY_FILL)
             for j in range(4, 4 + len(TC)):
                 cl = L(j)
@@ -334,7 +349,7 @@ def _build(wb):
         cell(f7, f"A{i}", r, BLUE, "0.0%", HDR_FILL)
         for k in range(len(NS)):
             pc, ec = L(2 + 2 * k), L(3 + 2 * k)
-            cell(f7, f"{pc}{i}", f"=$B$4*((1+$A{i})^{pc}$7-1)/$A{i}", BLACK, USD)
+            cell(f7, f"{pc}{i}", f"=IF($A{i}=0,$B$4*{pc}$7,$B$4*((1+$A{i})^{pc}$7-1)/$A{i})", BLACK, USD)
             cell(f7, f"{ec}{i}", "=" + EXIT(f"{pc}{i}", "$B$5"), BLACK, PCT2)
     end7 = 8 + len(RS_FINE)
     ch = ScatterChart(); ch.title = "Breakeven tc vs return (fixed contribution)"; ch.style = 13

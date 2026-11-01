@@ -54,3 +54,16 @@ def test_excel_numbers_match_python(workbook_path, tmp_path):
     _, _, ew, _ = grid([0.0], [0.12], 40, S, C=config.C,
                        k=config.K, other=config.OTHER, I=config.I)
     assert var["C58"].value == pytest.approx(ew[0, 0])
+
+def test_inputs_have_validation(workbook_path):
+    ws = load_workbook(workbook_path)["Inputs"]
+    rules = {str(dv.sqref): dv for dv in ws.data_validations.dataValidation}
+    k_rule = rules["B6"]
+    assert (k_rule.type, k_rule.formula1, k_rule.formula2) == ("whole", "1", "10")
+    assert rules["B9"].operator == "greaterThan"
+
+
+def test_pot_formulas_handle_zero_return(workbook_path):
+    wb = load_workbook(workbook_path)
+    assert wb["Fig1_6_7_Variant"]["B7"].value.startswith("=IF($A7=0,")
+    assert wb["Fig1_7_Curves"]["B9"].value.startswith("=IF($A9=0,")
