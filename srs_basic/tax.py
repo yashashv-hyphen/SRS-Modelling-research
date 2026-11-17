@@ -2,6 +2,7 @@
 
 import math
 
+import numpy as np
 import pandas as pd
 
 
@@ -59,6 +60,14 @@ def band_rate(x, schedule):
             return rate
     return schedule[-1][1]
 
+def tax_vec(x, schedule):
+    """Tax on an array of incomes x (any shape): same result as tax(), elementwise."""
+    uppers = np.array([upper for upper, _ in schedule])
+    rates = np.array([rate for _, rate in schedule])
+    lowers = np.concatenate([[0.0], uppers[:-1]])
+    x = np.asarray(x, dtype=float)[..., None]
+    slices = np.clip(np.minimum(x, uppers) - lowers, 0, None)
+    return (slices * rates).sum(axis=-1)
 
 if __name__ == "__main__":
     from srs_basic.config import REGIME, SCHEDULE_CSV

@@ -34,3 +34,11 @@ def test_malformed_schedule_raises(tmp_path, rows):
     path.write_text(HEADER + rows)
     with pytest.raises(ValueError):
         load_schedule(path, "X")
+
+def test_tax_vec_matches_tax():
+    import numpy as np
+    from srs_basic.tax import tax_vec
+    incomes = np.array([0, 20_000, 50_000, 100_000, 150_000, 500_000, 2_000_000])
+    expected = [tax(x, S) for x in incomes]
+    assert tax_vec(incomes, S) == pytest.approx(expected)
+    assert tax_vec(incomes.reshape(7, 1), S).shape == (7, 1)
