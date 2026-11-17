@@ -77,23 +77,31 @@ def main():
     left.legend(handles=handles, fontsize=8, loc="lower right",
                 title="Other income / policy", title_fontsize=8)
 
-    # Right: extra tax of the even rule over the optimum
-    for colour, (yo, rates) in zip(COLOURS, results.items()):
-        right.plot(STARTS, 1e4 * (rates["even"] - rates["optimal"]), color=colour, lw=1.6,
-                   label=f"\\${yo/1e3:g}k")
-    gap = max(np.max(np.abs(r["level"] - r["optimal"]) * STARTS) for r in results.values())
-    right.axhline(0, color="black", lw=0.8)
-    right.text(0.02, 0.97, f"Level payment = optimum to within \\${gap:,.0f}\n"
-               f"(solver grid accuracy), so not drawn", transform=right.transAxes,
-               fontsize=8, va="top")
-    right.set_title('Extra tax from "even share of what is left" vs optimum', fontsize=10)
-    right.set_ylabel("Extra tax (basis points of balance; 10 bp = 0.1%)")
-    right.legend(fontsize=8, title="Other income", title_fontsize=8, loc="upper right")
+    left.set_xlabel("SRS balance at start of withdrawals")
+    left.xaxis.set_major_formatter(MILLIONS)
+    left.grid(alpha=0.3)
 
-    for ax in (left, right):
-        ax.set_xlabel("SRS balance at start of withdrawals")
-        ax.xaxis.set_major_formatter(MILLIONS)
-        ax.grid(alpha=0.3)
+    # Right: extra tax ($) of the even rule over the optimum at a few balances
+    bars = [500_000, 1_000_000, 2_000_000, 3_000_000]
+    pos = np.searchsorted(STARTS, bars)
+    width = 0.8 / len(results)
+    for k, (colour, (yo, rates)) in enumerate(zip(COLOURS, results.items())):
+        extra = (rates["even"][pos] - rates["optimal"][pos]) * np.array(bars)
+        x = np.arange(len(bars)) + (k - (len(results) - 1) / 2) * width
+        right.bar(x, extra, width, color=colour, label=f"\\${yo/1e3:g}k")
+        for xi, v in zip(x, extra):
+            right.text(xi, v, f"{v:,.0f}", ha="center", va="bottom", fontsize=7)
+    gap = max(np.max(np.abs(r["level"] - r["optimal"]) * STARTS) for r in results.values())
+    right.text(0.02, 0.97, f"Level payment = optimum to within \\${gap:,.0f}\n"
+               f"(solver grid accuracy), so not shown", transform=right.transAxes,
+               fontsize=8, va="top")
+    right.set_xticks(range(len(bars)), [f"\\${b/1e6:g}M" for b in bars])
+    right.set_xlabel("SRS balance at start of withdrawals")
+    right.set_ylabel("Extra tax vs optimum (PV, $)")
+    right.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"${v:,.0f}"))
+    right.set_title('Extra tax from the "even share of what is left" rule', fontsize=10)
+    right.legend(fontsize=8, title="Other income", title_fontsize=8, loc="upper right")
+    right.grid(alpha=0.3, axis="y")
     fig.suptitle(f"Figure 2.4: what the withdrawal policy is worth (r = {config.R2:.0%}, "
                  f"YA2024 rates)", fontsize=11)
 
