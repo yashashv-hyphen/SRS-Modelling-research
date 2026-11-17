@@ -15,6 +15,7 @@ deliberately separate from `srs_model.py`: different withdrawal assumptions
     python -m srs_basic.figures.fig1_2_base
     python -m srs_basic.figures.fig1_3_to_1_5_sweeps
     python -m srs_basic.figures.fig1_6_1_7_variant
+    python -m srs_basic.make_excel
 
 Running a file by its path (`python srs_basic/figures/fig1_2_base.py`) fails
 with `ModuleNotFoundError`, because the repo root is then not on Python's path.
@@ -27,3 +28,4 @@ with `ModuleNotFoundError`, because the repo root is then not on Python's path.
 - Fixed-B figures show advantage per $1 invested at year 0; fixed-C figures
   show advantage per $1 contributed.
 - Figures and CSVs are written to `srs_basic/output/`; CSVs are not committed.
+- The Excel workbook takes its base case from `config.py` and its tax bands from the schedule CSV. `tests/test_make_excel.py` checks that, and, if LibreOffice is installed, that its numbers match `model1.grid`.
