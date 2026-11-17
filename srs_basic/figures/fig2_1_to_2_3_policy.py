@@ -32,6 +32,9 @@ STARTS = [500_000, 1_000_000, 2_000_000, 3_000_000]         # balances in the li
 COLOURS = ["#1f77b4", "#2ca02c", "#ff7f0e", "#d62728"]
 THOUSANDS = FuncFormatter(lambda v, _: f"${v/1e3:,.0f}k")
 K_TICKS = FuncFormatter(lambda v, _: f"{v/1e3:.0f}")
+LAST_YEAR_NOTE = ("leftover balance is taxed the year after the window" if config.DEEMED_SEPARATE
+                  else "with 1 year left, everything is withdrawn")
+RUN = dict(I=config.I, discount=config.DISCOUNT, deemed_separate=config.DEEMED_SEPARATE)
 
 
 def setting():
@@ -70,12 +73,12 @@ def figure_2_1(policies):
     """Heatmap of the recommended withdrawal ($k), other income $0."""
     W = policies[0][1]
     Z = W[YEARS_LEFT][:, ROW_IDX].T[::-1]
-    diff = max(np.abs(p[1][YEARS_LEFT][:, ROW_IDX] - W[YEARS_LEFT][:, ROW_IDX]).max()
-               for yo, p in policies.items() if yo != 0)
+    diff = max((np.abs(p[1][YEARS_LEFT][:, ROW_IDX] - W[YEARS_LEFT][:, ROW_IDX]).max()
+                for yo, p in policies.items() if yo != 0), default=0.0)
 
     fig, ax = plt.subplots(figsize=(9, 6.5), constrained_layout=True)
     annotated(ax, Z, lambda v: f"{v/1e3:.0f}", YEARS_LEFT,
-              "Withdrawal years left (with 1 year left, everything is withdrawn)",
+              f"Withdrawal years left ({LAST_YEAR_NOTE})",
               "Recommended withdrawal ($k)", fig, K_TICKS)
     ax.set_ylabel("SRS balance at start of year")
     others = ", ".join(f"\\${yo/1e3:g}k" for yo in config.YO_PANELS)
@@ -133,8 +136,8 @@ def figure_2_3(policies, schedule):
     """Year-by-year withdrawals: heatmap (left) + line chart (right)."""
     W = policies[0][1]
     years = np.arange(1, config.K + 1)
-    path = lambda b: simulate(W, B_GRID, b, config.R2, config.K, 0, schedule, I=config.I,
-                              discount=config.DISCOUNT)["withdrawals"][:config.K]
+    path = lambda b: simulate(W, B_GRID, b, config.R2, config.K, 0, schedule,
+                              **RUN)["withdrawals"][:config.K]
     Z = np.array([path(b) for b in ROWS[::-1]])
 
     fig, (left, right) = plt.subplots(1, 2, figsize=(16, 6), constrained_layout=True,
@@ -147,8 +150,8 @@ def figure_2_3(policies, schedule):
     rows = []
     for colour, b in zip(COLOURS, STARTS):
         opt = path(b)
-        even = benchmark("even", b, config.R2, config.K, 0, schedule, I=config.I,
-                         discount=config.DISCOUNT)["withdrawals"][:config.K]
+        even = benchmark("even", b, config.R2, config.K, 0, schedule,
+                         **RUN)["withdrawals"][:config.K]
         right.plot(years, opt, color=colour, lw=2.2, marker="o", ms=4,
                    label=f"${b/1e6:g}M: optimal")
         right.plot(years, even, color=colour, lw=1.2, ls="--", label=f"${b/1e6:g}M: even share")
