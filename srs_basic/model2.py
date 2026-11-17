@@ -10,6 +10,7 @@ import numpy as np
 from srs_basic.tax import tax_vec
 
 TIE_TOL = 0.01  # $: choices within this of the best are treated as equally good
+MAX_GRID_POINTS = 4_000  # solve() builds (points x points) arrays; 4,000 is about 128 MB each
 
 # same incremental concept as Model 1 but for one year 
 def withdrawal_tax(w, other, I, schedule):
@@ -36,6 +37,10 @@ def solve(r, other, K, B_grid, schedule, I=0.5, discount=True, deemed_separate=F
     so with 1 year left everything comes out.
     """
     B = np.asarray(B_grid, dtype=float)
+    if len(B) > MAX_GRID_POINTS:
+        raise ValueError(f"Balance grid has {len(B):,} points; the solver's memory grows with "
+                         f"the square of this. Use at most {MAX_GRID_POINTS:,} (raise DB or "
+                         f"lower B_MAX).")
     rows = np.arange(len(B))
     d = 1 / (1 + r) if discount else 1.0
 
@@ -92,7 +97,13 @@ def _run(rule, B0, r, K, other, schedule, I, discount, deemed_separate):
 
 def simulate(W, B_grid, B0, r, K, other, schedule, I=0.5, discount=True,
              deemed_separate=False):
-    """Follow the optimal policy W (from solve) starting from balance B0."""
+    """Follow the optimal policy W (from solve) starting from balance B0.
+
+    B0 must lie inside B_grid: outside it the policy was never solved.
+    """
+    if not B_grid[0] <= B0 <= B_grid[-1]:
+        raise ValueError(f"Starting balance {B0:,.0f} is outside the solved grid "
+                         f"({B_grid[0]:,.0f} to {B_grid[-1]:,.0f})")
     rule = lambda B, n: np.interp(B, B_grid, W[n])
     return _run(rule, B0, r, K, other, schedule, I, discount, deemed_separate)
 

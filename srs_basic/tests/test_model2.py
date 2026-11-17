@@ -105,3 +105,14 @@ def test_undiscounted_front_loads():
     _, W_pv, _, _ = solve(0.05, 0, 10, B_GRID, S, discount=True)
     _, W_nom, _, _ = solve(0.05, 0, 10, B_GRID, S, discount=False)
     assert W_nom[10, I_1M] > W_pv[10, I_1M]
+
+
+def test_simulate_rejects_balance_outside_grid():
+    _, W, _, _ = solve(0.05, 0, 10, B_GRID, S)
+    with pytest.raises(ValueError):
+        simulate(W, B_GRID, B_GRID[-1] + 1, 0.05, 10, 0, S)
+
+
+def test_solve_rejects_oversized_grid():
+    with pytest.raises(ValueError):
+        solve(0.05, 0, 10, np.arange(0, 5_000_000, 1_000), S)

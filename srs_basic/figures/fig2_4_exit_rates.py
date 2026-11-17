@@ -2,9 +2,9 @@
 
 Left:  exit rate under the optimal policy (solid) and a lump sum (dashed),
        one colour per level of other income.
-Right: extra tax paid by the "even share of what is left" rule compared with
-       the optimum (basis points of the balance). The level payment is not
-       drawn: it matches the optimum to within the solver's grid accuracy.
+Right: extra tax ($) paid by the "even share of what is left" rule compared
+       with the optimum at four balances. The level payment is not drawn: it
+       matches the optimum to within the solver's grid accuracy.
 
 Exit rate = total tax on withdrawals (PV if DISCOUNT) / starting balance.
 Run from the repo root: python -m srs_basic.figures.fig2_4_exit_rates
@@ -25,7 +25,8 @@ from srs_basic.tax import load_schedule
 OUTPUT = Path(config.OUTPUT_DIR)
 B_GRID = np.arange(0, config.B_MAX + config.DB, config.DB)
 STARTS = np.arange(25_000, config.B_PLOT_MAX + 1, 25_000)
-COLOURS = ["#1f77b4", "#2ca02c", "#ff7f0e", "#d62728"]
+COLOURS = [plt.cm.tab10(i % 10) for i in range(len(config.YO_PANELS))]  # one per panel
+TAX_BASIS = "PV" if config.DISCOUNT else "nominal"
 MILLIONS = FuncFormatter(lambda v, _: f"${v/1e6:g}M")
 
 
@@ -68,7 +69,7 @@ def main():
               fontsize=8, va="top", color="grey")
     left.set_ylim(-0.002, 0.12)
     left.set_title("Exit rate: optimal policy vs lump sum", fontsize=10)
-    left.set_ylabel("Exit rate (PV of tax / balance)")
+    left.set_ylabel(f"Exit rate ({TAX_BASIS} tax / balance)")
     left.yaxis.set_major_formatter(PercentFormatter(xmax=1, decimals=0))
     handles = [Line2D([], [], color=c, lw=2.2, label=f"\\${yo/1e3:g}k")
                for c, yo in zip(COLOURS, config.YO_PANELS)]
@@ -97,7 +98,7 @@ def main():
                fontsize=8, va="top")
     right.set_xticks(range(len(bars)), [f"\\${b/1e6:g}M" for b in bars])
     right.set_xlabel("SRS balance at start of withdrawals")
-    right.set_ylabel("Extra tax vs optimum (PV, $)")
+    right.set_ylabel(f"Extra tax vs optimum ({TAX_BASIS}, $)")
     right.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"${v:,.0f}"))
     right.set_title('Extra tax from the "even share of what is left" rule', fontsize=10)
     right.legend(fontsize=8, title="Other income", title_fontsize=8, loc="upper right")
