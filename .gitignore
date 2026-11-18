@@ -13,3 +13,4 @@ graphify-out/
 srs_basic/output/*.csv
 .DS_Store
 .venv/
+paper/figures/out/
