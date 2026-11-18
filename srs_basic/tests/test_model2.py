@@ -116,3 +116,10 @@ def test_simulate_rejects_balance_outside_grid():
 def test_solve_rejects_oversized_grid():
     with pytest.raises(ValueError):
         solve(0.05, 0, 10, np.arange(0, 5_000_000, 1_000), S)
+
+
+@pytest.mark.parametrize("r, expected", [(0.03, 0.0152), (0.05, 0.0168), (0.08, 0.0187)])
+def test_exit_rate_rises_with_return(r, expected):
+    # Values quoted in the Model 2 report (B = $1M, other income $0)
+    V, _, _, _ = solve(r, 0, 10, B_GRID, S)
+    assert V[10, I_1M] / 1_000_000 == pytest.approx(expected, abs=0.00005)
