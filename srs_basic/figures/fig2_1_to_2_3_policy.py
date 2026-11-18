@@ -1,6 +1,7 @@
 """Figures 2.1 to 2.3: optimal SRS withdrawal policy from the dynamic program.
 
 2.1  recommended withdrawal ($k) by balance and years left (heatmap)
+2.1b the same heatmap for each level of other income (2 x 2 panels)
 2.2  recommended withdrawal as % of balance: heatmap + line chart
 2.3  year-by-year withdrawals from several starting balances: heatmap + line chart
 
@@ -47,18 +48,23 @@ def solve_policy(other, schedule):
                  discount=config.DISCOUNT, deemed_separate=config.DEEMED_SEPARATE)
 
 
-def annotated(ax, Z, fmt, xlabels, xlabel, cbar_label, fig, cbar_fmt=None):
+def annotated(ax, Z, fmt, xlabels, xlabel, cbar_label, fig, cbar_fmt=None, vmax=None,
+              colorbar=True):
     """Light-to-dark blue heatmap with each cell's value written in it."""
-    im = ax.imshow(Z, cmap="Blues", aspect="auto", vmin=0, vmax=Z.max())
+    vmax = Z.max() if vmax is None else vmax
+    im = ax.imshow(Z, cmap="Blues", aspect="auto", vmin=0, vmax=vmax)
     for (i, j), v in np.ndenumerate(Z):
         ax.text(j, i, fmt(v), ha="center", va="center", fontsize=8,
-                color="white" if v > 0.55 * Z.max() else "black")
+                color="white" if v > 0.55 * vmax else "black")
     ax.set_xticks(range(len(xlabels)), xlabels)
     ax.set_yticks(range(len(ROW_LABELS)), ROW_LABELS)
     ax.set_xlabel(xlabel)
+    if not colorbar:
+        return im
     cbar = fig.colorbar(im, ax=ax, label=cbar_label)
     if cbar_fmt:
         cbar.ax.yaxis.set_major_formatter(cbar_fmt)
+    return im
 
 
 def save(fig, name, frame):
@@ -89,6 +95,36 @@ def figure_2_1(policies):
     n, B = np.meshgrid(YEARS_LEFT, ROWS[::-1])
     save(fig, "fig2_1_policy",
          pd.DataFrame({"balance": B.ravel(), "years_left": n.ravel(), "withdrawal": Z.ravel()}))
+
+
+def figure_2_1b(policies):
+    """Recommended withdrawal ($k) for each level of other income, 2 x 2 panels."""
+    tables = {yo: p[1][YEARS_LEFT][:, ROW_IDX].T[::-1] for yo, p in policies.items()}
+    base = tables[0] if 0 in tables else next(iter(tables.values()))
+    vmax = max(Z.max() for Z in tables.values())
+    ncols = 2
+    nrows = -(-len(tables) // ncols)
+    fig, axes = plt.subplots(nrows, ncols, figsize=(15, 6 * nrows), constrained_layout=True,
+                             squeeze=False)
+    rows = []
+    for ax, (yo, Z) in zip(axes.ravel(), tables.items()):
+        im = annotated(ax, Z, lambda v: f"{v/1e3:.0f}", YEARS_LEFT, "Withdrawal years left",
+                       "", fig, vmax=vmax, colorbar=False)
+        gap = np.abs(Z - base).max()
+        ax.set_title(f"Other income \\${yo/1e3:g}k a year "
+                     f"(largest difference from \\$0k: \\${gap:,.0f})", fontsize=10)
+        n, B = np.meshgrid(YEARS_LEFT, ROWS[::-1])
+        rows.append(pd.DataFrame({"other_income": yo, "balance": B.ravel(),
+                                  "years_left": n.ravel(), "withdrawal": Z.ravel()}))
+    for ax in axes.ravel()[len(tables):]:
+        ax.axis("off")
+    for ax in axes[:, 0]:
+        ax.set_ylabel("SRS balance at start of year")
+    cbar = fig.colorbar(im, ax=axes, label="Recommended withdrawal ($k)", shrink=0.6)
+    cbar.ax.yaxis.set_major_formatter(K_TICKS)
+    fig.suptitle(f"Figure 2.1b: recommended withdrawal (\\$k) by other income "
+                 f"({setting()})", fontsize=11)
+    save(fig, "fig2_1b_other_income", pd.concat(rows))
 
 
 def figure_2_2(policies):
@@ -181,6 +217,7 @@ def main():
     schedule = load_schedule(config.SCHEDULE_CSV, config.REGIME)
     policies = {yo: solve_policy(yo, schedule) for yo in config.YO_PANELS}
     figure_2_1(policies)
+    figure_2_1b(policies)
     figure_2_2(policies)
     figure_2_3(policies, schedule)
 
