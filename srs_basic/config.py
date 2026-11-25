@@ -25,3 +25,10 @@ B_PLOT_MAX = 3_000_000       # top of the y axis in Model 2 figures ($)
 YO_PANELS = (0, 20_000, 50_000, 100_000)   # other taxable income panels ($)
 DISCOUNT = True              # True: minimise PV of tax; False: total nominal tax
 DEEMED_SEPARATE = False      # True: leftover balance taxed in its own (11th) year
+
+# --- Model 3: tax regime (history and projection) ---
+ANCHOR_YA = 2007             # first YA of the settled schedule; revisions counted from here
+PROJECTION_YEARS = 50        # how far ahead the projected schedules run
+TOP_BAND_FROM = 160_000      # "top-band" scenario: only bands starting at or above this move
+                             # (the YA2017 and YA2024 rises only touched bands above $160k)
+JUMP_YEAR = 5                # Model 2 in-window jump: a revision lands this many years in
